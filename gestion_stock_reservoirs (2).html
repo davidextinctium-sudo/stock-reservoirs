@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestion Stock — Réservoirs Reconditionnés</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+  --primary: #0f3460;
+  --primary-light: #16213e;
+  --accent: #e94560;
+  --green: #16a34a;
+  --green-bg: #dcfce7;
+  --red: #dc2626;
+  --red-bg: #fee2e2;
+  --amber: #d97706;
+  --amber-bg: #fef3c7;
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow: 0 4px 16px rgba(0,0,0,0.08);
+  --radius: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+.header {
+  background: var(--primary); color: white;
+  padding: 0 28px; height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  position: sticky; top: 0; z-index: 100;
+}
+.header-brand { display: flex; align-items: center; gap: 12px; }
+.header-logo { width: 36px; height: 36px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.header-title { font-size: 1rem; font-weight: 700; }
+.header-sub { font-size: 0.72rem; opacity: 0.7; margin-top: 1px; display: flex; align-items: center; gap: 6px; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block; }
+.sync-dot.syncing { background: #f59e0b; animation: pulse 1s infinite; }
+.sync-dot.error { background: #ef4444; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 7px; border: none; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-ghost { background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.2); }
+.btn-ghost:hover { background: rgba(255,255,255,0.22); }
+.btn-green { background: var(--green); color: white; }
+.btn-green:hover { filter: brightness(1.1); }
+.btn-red { background: var(--red); color: white; }
+.btn-red:hover { filter: brightness(1.1); }
+.btn-outline { background: white; color: var(--text); border: 1.5px solid var(--border); }
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+.btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+
+.nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; padding: 0 28px; gap: 4px; overflow-x: auto; }
+.nav-btn { background: none; border: none; cursor: pointer; padding: 14px 18px; font-size: 0.87rem; font-weight: 500; color: var(--text-muted); border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 7px; transition: all 0.15s; white-space: nowrap; }
+.nav-btn:hover { color: var(--primary); }
+.nav-btn.active { color: var(--primary); border-bottom-color: var(--accent); font-weight: 700; }
+.nav-badge { background: var(--accent); color: white; border-radius: 20px; padding: 1px 7px; font-size: 0.7rem; font-weight: 700; }
+
+.page { display: none; padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+.page.active { display: block; }
+
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm); }
+.stat-val { font-size: 2rem; font-weight: 800; color: var(--primary); line-height: 1; }
+.stat-lbl { font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-icon { font-size: 1.4rem; margin-bottom: 6px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); margin-bottom: 20px; }
+.card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.card-title { font-size: 0.95rem; font-weight: 700; color: var(--primary); }
+.card-body { padding: 20px; }
+
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th { background: #f8fafc; padding: 10px 14px; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #f8fafc; }
+tbody td { padding: 11px 14px; font-size: 0.88rem; vertical-align: middle; }
+.td-actions { display: flex; gap: 6px; }
+
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+.badge-ok { background: var(--green-bg); color: var(--green); }
+.badge-low { background: var(--amber-bg); color: var(--amber); }
+.badge-zero { background: var(--red-bg); color: var(--red); }
+
+.search-bar { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; padding: 7px 12px; }
+.search-bar input { border: none; background: none; outline: none; font-size: 0.87rem; color: var(--text); width: 200px; }
+
+.qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.qr-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+.qr-card-header { background: var(--primary); color: white; padding: 12px 16px; }
+.qr-card-desig { font-weight: 700; font-size: 0.95rem; }
+.qr-card-couleur { font-size: 0.75rem; opacity: 0.7; margin-top: 2px; }
+.qr-pair { display: grid; grid-template-columns: 1fr 1fr; }
+.qr-half { padding: 16px 12px; text-align: center; border-right: 1px solid var(--border); }
+.qr-half:last-child { border-right: none; }
+.qr-type-label { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; }
+.qr-type-entree { background: var(--green-bg); color: var(--green); }
+.qr-type-sortie { background: var(--red-bg); color: var(--red); }
+.qr-canvas-wrap { display: flex; justify-content: center; margin-bottom: 6px; }
+.qr-hint { font-size: 0.7rem; color: var(--text-muted); }
+
+.histo-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.histo-item:last-child { border-bottom: none; }
+.histo-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+.histo-dot.entree { background: var(--green-bg); }
+.histo-dot.sortie { background: var(--red-bg); }
+.histo-body { flex: 1; min-width: 0; }
+.histo-ref { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.histo-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+.histo-qty { font-weight: 800; font-size: 1rem; flex-shrink: 0; }
+.histo-qty.entree { color: var(--green); }
+.histo-qty.sortie { color: var(--red); }
+.histo-date { font-size: 0.75rem; color: var(--text-muted); flex-shrink: 0; text-align: right; min-width: 120px; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.form-group input, .form-group select { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.9rem; color: var(--text); background: var(--surface); transition: border-color 0.15s; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+
+.modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,52,96,0.45); backdrop-filter: blur(2px); z-index: 500; align-items: center; justify-content: center; }
+.modal-backdrop.open { display: flex; }
+.modal-box { background: var(--surface); border-radius: 14px; padding: 28px 32px; width: 90%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: modalIn 0.18s ease; }
+@keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-title { font-size: 1.15rem; font-weight: 800; color: var(--primary); }
+.modal-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-top: 3px; margin-bottom: 0; }
+.modal-banner { margin: 16px 0; padding: 12px 16px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.modal-banner.entree { background: var(--green-bg); color: var(--green); }
+.modal-banner.sortie { background: var(--red-bg); color: var(--red); }
+.modal-qty-lbl { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+.modal-qty-input { width: 100%; padding: 14px; text-align: center; font-size: 1.8rem; font-weight: 800; border: 2px solid var(--border); border-radius: 10px; color: var(--primary); background: #f8fafc; transition: border-color 0.15s; }
+.modal-qty-input:focus { outline: none; border-color: var(--primary); background: white; }
+.modal-stock-info { font-size: 0.82rem; color: var(--text-muted); margin: 8px 0 20px; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-error { background: var(--red-bg); color: var(--red); padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 14px; display: none; }
+
+.toast { position: fixed; top: 72px; right: 20px; z-index: 999; padding: 12px 20px; border-radius: 10px; font-weight: 700; font-size: 0.9rem; box-shadow: var(--shadow); display: flex; align-items: center; gap: 8px; animation: toastIn 0.2s ease; max-width: 320px; }
+@keyframes toastIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
+.toast.entree { background: var(--green-bg); color: var(--green); border-left: 4px solid var(--green); }
+.toast.sortie { background: var(--red-bg); color: var(--red); border-left: 4px solid var(--red); }
+.toast.info { background: #eff6ff; color: var(--primary); border-left: 4px solid var(--primary); }
+.toast.warning { background: var(--amber-bg); color: var(--amber); border-left: 4px solid var(--amber); }
+
+.empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+.alert { padding: 11px 15px; border-radius: 8px; font-size: 0.87rem; margin-bottom: 14px; font-weight: 500; }
+.alert-ok { background: var(--green-bg); color: var(--green); }
+.alert-err { background: var(--red-bg); color: var(--red); }
+.family-sep td { background: #f0f4ff; font-size: 0.75rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px; padding: 6px 14px; }
+
+.loading-overlay { position: fixed; inset: 0; background: rgba(15,52,96,0.6); z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; gap: 16px; }
+.loading-spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 1rem; font-weight: 600; }
+
+@media print {
+  .header, .nav, .stats-row, .card-header .btn { display: none !important; }
+  .page { display: block !important; padding: 0; }
+  .qr-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .qr-card { break-inside: avoid; box-shadow: none; }
+}
+@media (max-width: 640px) {
+  .header { padding: 0 14px; }
+  .page { padding: 16px 14px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .search-bar input { width: 130px; }
+  .histo-date { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Chargement du stock…</div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-brand">
+    <div class="header-logo">🔴</div>
+    <div>
+      <div class="header-title">Gestion Stock — Réservoirs Reconditionnés</div>
+      <div class="header-sub">
+        <span class="sync-dot" id="sync-dot"></span>
+        <span id="sync-status">Connexion…</span>
+      </div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📤 Export CSV</button>
+    <button class="btn btn-ghost btn-sm" onclick="forcSync()">🔄 Synchroniser</button>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-btn active" data-page="stock" onclick="goTo(this)">📦 Stock <span class="nav-badge" id="nb-rupture" style="display:none">0</span></button>
+  <button class="nav-btn" data-page="qrcodes" onclick="goTo(this)">📲 QR Codes</button>
+  <button class="nav-btn" data-page="histo" onclick="goTo(this)">📋 Historique</button>
+  <button class="nav-btn" data-page="refs" onclick="goTo(this)">⚙️ Références</button>
+</nav>
+
+<!-- PAGE STOCK -->
+<div class="page active" id="page-stock">
+  <div class="stats-row">
+    <div class="stat"><div class="stat-icon">📦</div><div class="stat-val" id="s-total">0</div><div class="stat-lbl">Références</div></div>
+    <div class="stat"><div class="stat-icon">🔢</div><div class="stat-val" id="s-units">0</div><div class="stat-lbl">Unités en stock</div></div>
+    <div class="stat"><div class="stat-icon">⚠️</div><div class="stat-val" id="s-low">0</div><div class="stat-lbl">Stocks bas</div></div>
+    <div class="stat"><div class="stat-icon">🚫</div><div class="stat-val" id="s-zero">0</div><div class="stat-lbl">Ruptures</div></div>
+    <div class="stat"><div class="stat-icon">📊</div><div class="stat-val" id="s-mvt">0</div><div class="stat-lbl">Mouvements</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">État du stock</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="search-bar"><span>🔍</span><input id="q-stock" placeholder="Rechercher…" oninput="renderStock()"></div>
+        <select id="filtre-stock" onchange="renderStock()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.82rem;color:var(--text)">
+          <option value="">Toutes familles</option>
+        </select>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Famille</th><th>Désignation</th>
+          <th style="text-align:center">Stock</th><th>Statut</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="tbody-stock"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE QR CODES -->
+<div class="page" id="page-qrcodes">
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-body" style="padding:14px 20px">
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <p style="font-weight:700;color:var(--primary);margin-bottom:6px">📲 Comment utiliser les QR codes</p>
+          <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.6">Flashez le QR code <span style="color:var(--green);font-weight:700">▲ ENTRÉE</span> ou <span style="color:var(--red);font-weight:700">▼ SORTIE</span> avec votre téléphone. La page s'ouvre et vous demande la quantité. Le stock est mis à jour en temps réel pour tous les postes.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="search-bar"><span>🔍</span><input id="q-qr" placeholder="Filtrer…" oninput="renderQR()"></div>
+          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Imprimer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="qr-grid" id="qr-grid"></div>
+</div>
+
+<!-- PAGE HISTORIQUE -->
+<div class="page" id="page-histo">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Historique des mouvements</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="filtre-histo" onchange="renderHisto()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.82rem">
+          <option value="">Tous</option>
+          <option value="entree">Entrées</option>
+          <option value="sortie">Sorties</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="clearHisto()">🗑️ Vider</button>
+      </div>
+    </div>
+    <div class="card-body" id="histo-list"></div>
+  </div>
+</div>
+
+<!-- PAGE RÉFÉRENCES -->
+<div class="page" id="page-refs">
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><span class="card-title">➕ Ajouter une référence</span></div>
+    <div class="card-body">
+      <div class="form-grid" style="margin-bottom:14px">
+        <div class="form-group">
+          <label>Famille / Couleur</label>
+          <input id="n-famille" placeholder="Ex : Réservoir tout rouge" list="dl-familles">
+          <datalist id="dl-familles"></datalist>
+        </div>
+        <div class="form-group"><label>Désignation</label><input id="n-desig" placeholder="Ex : FYKE 80 L - 300 Bar"></div>
+        <div class="form-group"><label>Stock initial</label><input id="n-stock" type="number" value="0" min="0"></div>
+        <div class="form-group"><label>Seuil d'alerte</label><input id="n-seuil" type="number" value="5" min="0"></div>
+      </div>
+      <div id="add-msg" style="display:none"></div>
+      <button class="btn btn-primary" onclick="addRef()">➕ Ajouter</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Gérer les références</span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Famille</th><th>Désignation</th><th>Stock</th><th>Seuil</th><th>Action</th></tr></thead>
+        <tbody id="tbody-refs"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal-box">
+    <div class="modal-title" id="m-title"></div>
+    <div class="modal-subtitle" id="m-sub"></div>
+    <div class="modal-banner" id="m-banner"></div>
+    <div class="modal-qty-lbl">Quantité</div>
+    <input class="modal-qty-input" id="m-qty" type="number" min="1" value="1">
+    <div class="modal-stock-info" id="m-info"></div>
+    <div class="modal-error" id="m-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Annuler</button>
+      <button class="btn" id="m-confirm" onclick="confirmMvt()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+//  CONFIG JSONBIN
+// ════════════════════════════════════════
+const BIN_ID  = '6a0da8606877513b27a26f68';
+const API_KEY = '$2a$10$CsvDZUqgyyBnWfr7AOR/OOvFQwRLkf9DxipllxZXJnx2CWBDFjPSa';
+const BIN_URL = 'https://api.jsonbin.io/v3/b/' + BIN_ID;
+
+// ════════════════════════════════════════
+//  DONNÉES PAR DÉFAUT
+// ════════════════════════════════════════
+const DEFAULTS = [
+  { id:'FYKE80L300B',  famille:'Réservoir tout rouge',        desig:'FYKE 80 L - 300 Bar',     stock:0, seuil:5 },
+  { id:'ROV140L300B',  famille:'Réservoir rouge Ogive Verte', desig:'140 L - 300 Bar',          stock:0, seuil:5 },
+  { id:'ROV140L200B',  famille:'Réservoir rouge Ogive Verte', desig:'140 L - 200 Bar',          stock:0, seuil:5 },
+  { id:'ROV80L300B',   famille:'Réservoir rouge Ogive Verte', desig:'80 L - 300 Bar',           stock:0, seuil:5 },
+  { id:'ROV80L200B',   famille:'Réservoir rouge Ogive Verte', desig:'80 L - 200 Bar',           stock:0, seuil:5 },
+  { id:'ROV50L200B',   famille:'Réservoir rouge Ogive Verte', desig:'50 L - 200 Bar',           stock:0, seuil:3 },
+  { id:'ROV268L200B',  famille:'Réservoir rouge Ogive Verte', desig:'26,8 L - 200 Bar',         stock:0, seuil:3 },
+  { id:'ROV268L250B',  famille:'Réservoir rouge Ogive Verte', desig:'26,8 L - 250 Bar',         stock:0, seuil:3 },
+  { id:'ROV134L200B',  famille:'Réservoir rouge Ogive Verte', desig:'13,4 L - 200 Bar',         stock:0, seuil:3 },
+  { id:'ROV134L250B',  famille:'Réservoir rouge Ogive Verte', desig:'13,4 L - 250 Bar',         stock:0, seuil:3 },
+  { id:'ROV5L250Ba',   famille:'Réservoir rouge Ogive Verte', desig:'5 L - 250 Bar (A)',        stock:0, seuil:5 },
+  { id:'ROV5L250Bb',   famille:'Réservoir rouge Ogive Verte', desig:'5 L - 250 Bar (B)',        stock:0, seuil:5 },
+  { id:'ROV3L200B',    famille:'Réservoir rouge Ogive Verte', desig:'3 L - 200 Bar',            stock:0, seuil:5 },
+  { id:'CHB80L300B',   famille:'Réservoir tout vert',         desig:'Chubb 80 L - 300 Bar',     stock:0, seuil:3 },
+  { id:'CHB80L200B',   famille:'Réservoir tout vert',         desig:'Chubb 80 L - 200 Bar',     stock:0, seuil:3 },
+  { id:'CHB50L300B',   famille:'Réservoir tout vert',         desig:'Chubb 50 L - 300 Bar',     stock:0, seuil:3 },
+  { id:'CHB50L200B',   famille:'Réservoir tout vert',         desig:'Chubb 50 L - 200 Bar',     stock:0, seuil:3 },
+  { id:'CHB7L200B',    famille:'Réservoir tout vert',         desig:'Chubb 7 L - 200 Bar',      stock:0, seuil:5 },
+];
+
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let refs = [], histo = [], modal = {};
+let syncTimer = null;
+
+// ════════════════════════════════════════
+//  JSONBIN API
+// ════════════════════════════════════════
+async function loadFromCloud() {
+  setSyncStatus('syncing', 'Chargement…');
+  try {
+    const r = await fetch(BIN_URL + '/latest', {
+      headers: { 'X-Master-Key': API_KEY }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const data = d.record;
+    if (data.refs && data.refs.length > 0) {
+      refs = data.refs;
+      histo = data.histo || [];
+    } else {
+      refs = JSON.parse(JSON.stringify(DEFAULTS));
+      histo = [];
+      await saveToCloud();
+    }
+    setSyncStatus('ok', 'Synchronisé · ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
+  } catch(e) {
+    setSyncStatus('error', 'Erreur de connexion');
+    // Fallback localStorage
+    try {
+      const local = localStorage.getItem('stock_v2');
+      if (local) { const d = JSON.parse(local); refs = d.refs||[]; histo = d.histo||[]; }
+      else { refs = JSON.parse(JSON.stringify(DEFAULTS)); histo = []; }
+    } catch { refs = JSON.parse(JSON.stringify(DEFAULTS)); histo = []; }
+    showToast('⚠️ Mode hors ligne — données locales', 'warning');
+  }
+  document.getElementById('loading').style.display = 'none';
+  renderStock();
+  checkURL();
+}
+
+async function saveToCloud() {
+  setSyncStatus('syncing', 'Sauvegarde…');
+  // Sauvegarde locale en parallèle
+  localStorage.setItem('stock_v2', JSON.stringify({refs, histo}));
+  try {
+    const r = await fetch(BIN_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+      body: JSON.stringify({ refs, histo })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    setSyncStatus('ok', 'Synchronisé · ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
+  } catch(e) {
+    setSyncStatus('error', 'Erreur sync — données sauvées localement');
+    showToast('⚠️ Sync cloud échouée — sauvegarde locale OK', 'warning');
+  }
+}
+
+function setSyncStatus(state, text) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot' + (state==='syncing'?' syncing':state==='error'?' error':'');
+  document.getElementById('sync-status').textContent = text;
+}
+
+function forcSync() {
+  loadFromCloud().then(() => { renderStock(); showToast('🔄 Stock rechargé depuis le cloud', 'info'); });
+}
+
+// Auto-refresh toutes les 30 secondes
+setInterval(() => {
+  loadFromCloud().then(() => renderStock());
+}, 30000);
+
+// ════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════
+function goTo(btn) {
+  const pg = btn.dataset.page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + pg).classList.add('active');
+  btn.classList.add('active');
+  if (pg==='stock')   renderStock();
+  if (pg==='qrcodes') renderQR();
+  if (pg==='histo')   renderHisto();
+  if (pg==='refs')    renderRefs();
+}
+
+// ════════════════════════════════════════
+//  STOCK
+// ════════════════════════════════════════
+function renderStock() {
+  const q = document.getElementById('q-stock').value.toLowerCase();
+  const fam = document.getElementById('filtre-stock').value;
+  const fams = [...new Set(refs.map(r=>r.famille))];
+  const sel = document.getElementById('filtre-stock');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Toutes familles</option>' +
+    fams.map(f=>`<option value="${f}" ${f===cur?'selected':''}>${f}</option>`).join('');
+
+  const filtered = refs.filter(r =>
+    (!q || r.desig.toLowerCase().includes(q) || r.famille.toLowerCase().includes(q)) &&
+    (!fam || r.famille === fam)
+  );
+
+  let lastFam = null;
+  document.getElementById('tbody-stock').innerHTML = filtered.map(r => {
+    let sep = '';
+    if (r.famille !== lastFam) { lastFam = r.famille; sep = `<tr class="family-sep"><td colspan="5">${r.famille}</td></tr>`; }
+    const b = r.stock===0 ? '<span class="badge badge-zero">🚫 Rupture</span>'
+            : r.stock<=r.seuil ? '<span class="badge badge-low">⚠️ Stock bas</span>'
+            : '<span class="badge badge-ok">✅ OK</span>';
+    return sep + `<tr>
+      <td style="color:var(--text-muted);font-size:0.8rem">${r.famille}</td>
+      <td style="font-weight:600">${r.desig}</td>
+      <td style="text-align:center;font-size:1.1rem;font-weight:800;color:var(--primary)">${r.stock}</td>
+      <td>${b}</td>
+      <td class="td-actions">
+        <button class="btn btn-green btn-sm" onclick="openModal('${r.id}','entree')">▲ Entrée</button>
+        <button class="btn btn-red btn-sm" onclick="openModal('${r.id}','sortie')">▼ Sortie</button>
+      </td></tr>`;
+  }).join('');
+
+  document.getElementById('s-total').textContent = refs.length;
+  document.getElementById('s-units').textContent = refs.reduce((a,r)=>a+r.stock,0);
+  const low = refs.filter(r=>r.stock>0&&r.stock<=r.seuil).length;
+  const zero = refs.filter(r=>r.stock===0).length;
+  document.getElementById('s-low').textContent = low;
+  document.getElementById('s-zero').textContent = zero;
+  document.getElementById('s-mvt').textContent = histo.length;
+  const nb = document.getElementById('nb-rupture');
+  nb.textContent = zero; nb.style.display = zero ? 'inline' : 'none';
+}
+
+// ════════════════════════════════════════
+//  QR CODES
+// ════════════════════════════════════════
+function renderQR() {
+  const q = document.getElementById('q-qr').value.toLowerCase();
+  const filtered = refs.filter(r => !q || r.desig.toLowerCase().includes(q) || r.famille.toLowerCase().includes(q));
+  const base = window.location.href.split('?')[0];
+  const grid = document.getElementById('qr-grid');
+  grid.innerHTML = '';
+  if (!filtered.length) { grid.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>Aucune référence trouvée</div></div>'; return; }
+  filtered.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'qr-card';
+    card.innerHTML = `<div class="qr-card-header"><div class="qr-card-desig">${r.desig}</div><div class="qr-card-couleur">${r.famille}</div></div>
+      <div class="qr-pair">
+        <div class="qr-half"><div class="qr-type-label qr-type-entree">▲ ENTRÉE</div><div class="qr-canvas-wrap" id="qe-${r.id}"></div><div class="qr-hint">Scanner → entrée stock</div></div>
+        <div class="qr-half"><div class="qr-type-label qr-type-sortie">▼ SORTIE</div><div class="qr-canvas-wrap" id="qs-${r.id}"></div><div class="qr-hint">Scanner → sortie stock</div></div>
+      </div>`;
+    grid.appendChild(card);
+    new QRCode(document.getElementById('qe-'+r.id), { text: base+'?ref='+encodeURIComponent(r.id)+'&action=entree', width:110, height:110, colorDark:'#16a34a', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    new QRCode(document.getElementById('qs-'+r.id), { text: base+'?ref='+encodeURIComponent(r.id)+'&action=sortie', width:110, height:110, colorDark:'#dc2626', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  });
+}
+
+// ════════════════════════════════════════
+//  MODAL
+// ════════════════════════════════════════
+function openModal(id, action) {
+  const r = refs.find(x=>x.id===id); if (!r) return;
+  modal = { id, action };
+  document.getElementById('m-title').textContent = action==='entree' ? '▲ Entrée en stock' : '▼ Sortie de stock';
+  document.getElementById('m-sub').textContent = r.desig + ' · ' + r.famille;
+  const banner = document.getElementById('m-banner');
+  banner.className = 'modal-banner ' + action;
+  banner.textContent = action==='entree' ? '➕ Combien d\'unités entrent en stock ?' : '➖ Combien d\'unités sortent du stock ?';
+  document.getElementById('m-info').textContent = 'Stock actuel : ' + r.stock + ' unité(s) · Seuil d\'alerte : ' + r.seuil;
+  document.getElementById('m-qty').value = 1;
+  document.getElementById('m-err').style.display = 'none';
+  const btn = document.getElementById('m-confirm');
+  btn.textContent = action==='entree' ? '▲ Confirmer l\'entrée' : '▼ Confirmer la sortie';
+  btn.className = 'btn ' + (action==='entree' ? 'btn-green' : 'btn-red');
+  document.getElementById('modal').classList.add('open');
+  setTimeout(()=>document.getElementById('m-qty').focus(), 80);
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); modal = {}; }
+
+async function confirmMvt() {
+  const qty = parseInt(document.getElementById('m-qty').value)||0;
+  const err = document.getElementById('m-err');
+  if (qty <= 0) { err.textContent='Quantité invalide.'; err.style.display='block'; return; }
+  const r = refs.find(x=>x.id===modal.id);
+  if (modal.action==='sortie' && qty>r.stock) { err.textContent='Stock insuffisant ('+r.stock+' disponible(s)).'; err.style.display='block'; return; }
+  const avant = r.stock;
+  if (modal.action==='entree') r.stock += qty; else r.stock -= qty;
+  histo.unshift({ date: new Date().toISOString(), id: r.id, desig: r.desig, famille: r.famille, action: modal.action, qty, avant, apres: r.stock });
+  const action = modal.action;
+  closeModal();
+  renderStock();
+  showToast((action==='entree'?'▲ +':'▼ -')+qty+' — '+r.desig, action);
+  await saveToCloud();
+}
+
+// ════════════════════════════════════════
+//  HISTORIQUE
+// ════════════════════════════════════════
+function renderHisto() {
+  const type = document.getElementById('filtre-histo').value;
+  const list = histo.filter(h=>!type||h.action===type);
+  const el = document.getElementById('histo-list');
+  if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div>Aucun mouvement enregistré</div></div>'; return; }
+  el.innerHTML = list.map(h => {
+    const d = new Date(h.date);
+    const ds = d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="histo-item">
+      <div class="histo-dot ${h.action}">${h.action==='entree'?'▲':'▼'}</div>
+      <div class="histo-body"><div class="histo-ref">${h.desig}</div><div class="histo-meta">${h.famille} · Avant : ${h.avant} → Après : ${h.apres}</div></div>
+      <div class="histo-qty ${h.action}">${h.action==='entree'?'+':'-'}${h.qty}</div>
+      <div class="histo-date">${ds}</div>
+    </div>`;
+  }).join('');
+}
+
+async function clearHisto() {
+  if (!confirm('Vider tout l\'historique ?')) return;
+  histo = []; await saveToCloud(); renderHisto();
+}
+
+// ════════════════════════════════════════
+//  RÉFÉRENCES
+// ════════════════════════════════════════
+function renderRefs() {
+  const fams = [...new Set(refs.map(r=>r.famille))];
+  document.getElementById('dl-familles').innerHTML = fams.map(f=>`<option value="${f}">`).join('');
+  document.getElementById('tbody-refs').innerHTML = refs.map((r,i) => `<tr>
+    <td style="font-size:0.82rem;color:var(--text-muted)">${r.famille}</td>
+    <td style="font-weight:600">${r.desig}</td>
+    <td><input type="number" value="${r.stock}" min="0" style="width:70px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:0.88rem" onchange="updRef(${i},'stock',this.value)"></td>
+    <td><input type="number" value="${r.seuil}" min="0" style="width:70px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:0.88rem" onchange="updRef(${i},'seuil',this.value)"></td>
+    <td><button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="delRef(${i})">🗑️ Supprimer</button></td>
+  </tr>`).join('');
+}
+
+async function updRef(i, field, val) { refs[i][field] = parseInt(val)||0; await saveToCloud(); }
+
+async function addRef() {
+  const famille = document.getElementById('n-famille').value.trim();
+  const desig   = document.getElementById('n-desig').value.trim();
+  const stock   = parseInt(document.getElementById('n-stock').value)||0;
+  const seuil   = parseInt(document.getElementById('n-seuil').value)||5;
+  const msg = document.getElementById('add-msg');
+  if (!famille||!desig) { msg.innerHTML='<div class="alert alert-err">Famille et désignation obligatoires.</div>'; msg.style.display='block'; return; }
+  const id = 'REF'+Date.now();
+  refs.push({id, famille, desig, stock, seuil});
+  if (stock>0) histo.unshift({date:new Date().toISOString(),id,desig,famille,action:'entree',qty:stock,avant:0,apres:stock});
+  await saveToCloud();
+  ['n-famille','n-desig'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('n-stock').value=0; document.getElementById('n-seuil').value=5;
+  msg.innerHTML='<div class="alert alert-ok">✅ "'+desig+'" ajoutée avec succès.</div>';
+  msg.style.display='block';
+  setTimeout(()=>msg.style.display='none', 3000);
+  renderRefs();
+}
+
+async function delRef(i) {
+  if (!confirm('Supprimer "'+refs[i].desig+'" ?')) return;
+  refs.splice(i,1); await saveToCloud(); renderRefs();
+}
+
+// ════════════════════════════════════════
+//  EXPORT CSV
+// ════════════════════════════════════════
+function exportCSV() {
+  let c = '\uFEFFDate;Désignation;Famille;Action;Quantité;Stock avant;Stock après\n';
+  histo.forEach(h => { c += `"${new Date(h.date).toLocaleString('fr-FR')}";"${h.desig}";"${h.famille}";"${h.action}";${h.qty};${h.avant};${h.apres}\n`; });
+  c += '\n\nSTOCK ACTUEL\nFamille;Désignation;Stock;Seuil\n';
+  refs.forEach(r => { c += `"${r.famille}";"${r.desig}";${r.stock};${r.seuil}\n`; });
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(c);
+  a.download = 'stock_reservoirs_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3000);
+}
+
+// ════════════════════════════════════════
+//  QR CODE URL HANDLER
+// ════════════════════════════════════════
+function checkURL() {
+  const p = new URLSearchParams(window.location.search);
+  const ref = p.get('ref'), action = p.get('action');
+  if (ref && (action==='entree'||action==='sortie')) {
+    const r = refs.find(x=>x.id===ref);
+    if (r) setTimeout(()=>openModal(ref, action), 300);
+    else showToast('Référence introuvable : '+ref, 'warning');
+    history.replaceState({}, '', location.pathname);
+  }
+}
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+loadFromCloud();
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+document.getElementById('m-qty').addEventListener('keydown', e => { if(e.key==='Enter') confirmMvt(); });
+document.getElementById('modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+</script>
+</body>
+</html>
