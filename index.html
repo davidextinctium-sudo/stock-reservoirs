@@ -170,6 +170,34 @@ tbody td { padding: 11px 14px; font-size: 0.88rem; vertical-align: middle; }
   .histo-date { display: none; }
   .qr-grid { grid-template-columns: 1fr; }
 }
+
+/* ── LOGIN ── */
+.login-page { position: fixed; inset: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.login-box { background: white; border-radius: 16px; padding: 40px 36px; width: 90%; max-width: 380px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.login-logo { font-size: 3rem; margin-bottom: 12px; }
+.login-title { font-size: 1.3rem; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+.login-sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 28px; }
+.login-select { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; color: var(--text); background: var(--surface); margin-bottom: 14px; }
+.login-select:focus { outline: none; border-color: var(--primary); }
+.pin-label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px; }
+.pin-dots { display: flex; justify-content: center; gap: 12px; margin-bottom: 20px; }
+.pin-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); background: white; transition: all 0.15s; }
+.pin-dot.filled { background: var(--primary); border-color: var(--primary); }
+.pin-dot.error { background: var(--red); border-color: var(--red); animation: shake 0.3s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+.pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.pin-btn { padding: 16px; font-size: 1.2rem; font-weight: 700; border: 1.5px solid var(--border); border-radius: 10px; background: white; color: var(--text); cursor: pointer; transition: all 0.15s; }
+.pin-btn:hover { background: var(--bg); border-color: var(--primary); color: var(--primary); }
+.pin-btn:active { transform: scale(0.95); }
+.pin-btn.del { font-size: 1rem; color: var(--text-muted); }
+.pin-btn.empty { visibility: hidden; }
+.login-error { color: var(--red); font-size: 0.85rem; margin-bottom: 12px; min-height: 20px; }
+
+/* ── ADMIN MODAL ── */
+.admin-modal { display: none; position: fixed; inset: 0; background: rgba(15,52,96,0.5); z-index: 3000; align-items: center; justify-content: center; }
+.admin-modal.open { display: flex; }
+.admin-box { background: white; border-radius: 14px; padding: 28px 32px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+
 </style>
 </head>
 <body>
@@ -184,7 +212,7 @@ tbody td { padding: 11px 14px; font-size: 0.88rem; vertical-align: middle; }
     <div class="header-logo">🔴</div>
     <div>
       <div class="header-title">Gestion Stock — Réservoirs Reconditionnés</div>
-      <div class="header-sub"><span class="sync-dot" id="sync-dot"></span><span id="sync-status">Connexion…</span> &nbsp;·&nbsp; <span id="header-user" style="cursor:pointer;text-decoration:underline;opacity:0.85" onclick="changeUser()" title="Changer d'utilisateur">👤 —</span></div>
+      <div class="header-sub"><span class="sync-dot" id="sync-dot"></span><span id="sync-status">Connexion…</span> &nbsp;·&nbsp; <span id="header-user" style="cursor:pointer;text-decoration:underline;opacity:0.85" onclick="changeUser()" title="Se déconnecter">👤 —</span></div>
     </div>
   </div>
   <div class="header-actions">
@@ -1068,35 +1096,93 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.cu
 
 </div>
 
-<!-- MODAL UTILISATEUR -->
-<div class="modal-backdrop open" id="modal-user" style="z-index:600">
-  <div class="modal-box" style="max-width:380px;text-align:center">
-    <div style="font-size:2.5rem;margin-bottom:12px">👤</div>
-    <div class="modal-title" style="text-align:center;margin-bottom:6px">Qui êtes-vous ?</div>
-    <div class="modal-subtitle" style="text-align:center;margin-bottom:20px">Sélectionnez votre nom pour identifier vos mouvements de stock</div>
-    <select id="user-name-select"
-      style="width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-size:1rem;text-align:center;margin-bottom:8px;color:var(--text);background:var(--surface)">
-      <option value="">-- Choisissez votre nom --</option>
+<!-- PAGE LOGIN -->
+<div class="login-page" id="login-page">
+  <div class="login-box">
+    <div class="login-logo">🔴</div>
+    <div class="login-title">Gestion Stock</div>
+    <div class="login-sub">Réservoirs Reconditionnés — EXTINCTIUM</div>
+    <select class="login-select" id="login-select" onchange="resetPin()">
+      <option value="">-- Sélectionnez votre nom --</option>
     </select>
-    <div id="user-name-err" style="color:var(--red);font-size:0.82rem;margin-bottom:12px;display:none">Veuillez sélectionner votre nom.</div>
-    <button class="btn btn-primary" style="width:100%;padding:12px;font-size:1rem;margin-bottom:10px" onclick="saveUserName()">✅ Confirmer</button>
-    <button class="btn btn-outline" style="width:100%;padding:10px;font-size:0.85rem" onclick="showManageUsers()">⚙️ Gérer la liste des utilisateurs</button>
+    <div class="pin-label">Code PIN</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="dot-0"></div>
+      <div class="pin-dot" id="dot-1"></div>
+      <div class="pin-dot" id="dot-2"></div>
+      <div class="pin-dot" id="dot-3"></div>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn empty"></button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn del" onclick="pinDel()">⌫</button>
+    </div>
+    <button class="btn btn-outline" style="width:100%;font-size:0.82rem;color:var(--text-muted)" onclick="showAdminLogin()">🔐 Administration</button>
   </div>
 </div>
 
-<!-- MODAL GESTION UTILISATEURS -->
-<div class="modal-backdrop" id="modal-manage-users" style="z-index:700">
-  <div class="modal-box" style="max-width:420px">
-    <div class="modal-title" style="margin-bottom:6px">⚙️ Gérer les utilisateurs</div>
-    <div class="modal-subtitle" style="margin-bottom:20px">Ajoutez ou supprimez des personnes de la liste</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <input id="new-user-input" type="text" placeholder="Prénom ou nom…"
-        style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;color:var(--text)">
-      <button class="btn btn-green" onclick="addUser()">➕ Ajouter</button>
+<!-- MODAL ADMIN LOGIN -->
+<div class="admin-modal" id="admin-login-modal">
+  <div class="admin-box" style="max-width:340px;text-align:center">
+    <div style="font-size:2rem;margin-bottom:12px">🔐</div>
+    <div style="font-size:1.1rem;font-weight:800;color:var(--primary);margin-bottom:6px">Accès administrateur</div>
+    <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:20px">Entrez le code admin pour gérer les utilisateurs</div>
+    <div class="pin-label">Code Admin</div>
+    <div class="pin-dots" id="admin-dots">
+      <div class="pin-dot" id="adot-0"></div>
+      <div class="pin-dot" id="adot-1"></div>
+      <div class="pin-dot" id="adot-2"></div>
+      <div class="pin-dot" id="adot-3"></div>
     </div>
-    <div id="users-list" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:16px"></div>
-    <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button class="btn btn-outline" onclick="closeManageUsers()">Fermer</button>
+    <div class="login-error" id="admin-error"></div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="adminPinPress('1')">1</button>
+      <button class="pin-btn" onclick="adminPinPress('2')">2</button>
+      <button class="pin-btn" onclick="adminPinPress('3')">3</button>
+      <button class="pin-btn" onclick="adminPinPress('4')">4</button>
+      <button class="pin-btn" onclick="adminPinPress('5')">5</button>
+      <button class="pin-btn" onclick="adminPinPress('6')">6</button>
+      <button class="pin-btn" onclick="adminPinPress('7')">7</button>
+      <button class="pin-btn" onclick="adminPinPress('8')">8</button>
+      <button class="pin-btn" onclick="adminPinPress('9')">9</button>
+      <button class="pin-btn empty"></button>
+      <button class="pin-btn" onclick="adminPinPress('0')">0</button>
+      <button class="pin-btn del" onclick="adminPinDel()">⌫</button>
+    </div>
+    <button class="btn btn-outline" style="width:100%" onclick="closeAdminLogin()">Annuler</button>
+  </div>
+</div>
+
+<!-- MODAL ADMIN PANEL -->
+<div class="admin-modal" id="admin-panel-modal">
+  <div class="admin-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:1.1rem;font-weight:800;color:var(--primary)">🔐 Panel Administrateur</div>
+      <button class="btn btn-outline btn-sm" onclick="closeAdminPanel()">Fermer</button>
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="font-weight:700;color:var(--primary);margin-bottom:12px;font-size:0.9rem">➕ Ajouter un utilisateur</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <input id="new-user-name" type="text" placeholder="Prénom ou nom…" style="flex:1;min-width:140px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem">
+        <input id="new-user-pin" type="password" placeholder="PIN (4 chiffres)" maxlength="4" style="width:130px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;text-align:center;letter-spacing:4px">
+        <button class="btn btn-green" onclick="adminAddUser()">➕</button>
+      </div>
+      <div id="admin-add-err" style="color:var(--red);font-size:0.82rem;display:none"></div>
+    </div>
+    <div style="font-weight:700;color:var(--primary);margin-bottom:10px;font-size:0.9rem">👥 Utilisateurs</div>
+    <div id="admin-users-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px"></div>
+    <div style="background:var(--amber-bg);border-radius:8px;padding:10px 14px;font-size:0.82rem;color:var(--amber)">
+      💡 Le code PIN par défaut pour les nouveaux utilisateurs est <strong>0000</strong>
     </div>
   </div>
 </div>
