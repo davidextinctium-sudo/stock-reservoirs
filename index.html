@@ -640,7 +640,7 @@ function resetPin(){
 function pinPress(d){
   if(pinBuf.length>=4) return;
   const name=document.getElementById('login-select').value;
-  if(!name){document.getElementById('login-error').textContent='Sélectionnez votre nom d\'abord.';return;}
+  if(!name){document.getElementById('login-error').textContent="Sélectionnez votre nom d'abord.";return;}
   pinBuf+=d;
   updateDots('dot-',pinBuf,false);
   if(pinBuf.length===4) setTimeout(()=>checkPin(name,pinBuf),150);
@@ -1119,7 +1119,7 @@ let cpOldBuf='', cpNewBuf='', cpConfBuf='';
 
 function showChangePinModal(){
   const user = localStorage.getItem('stock_session');
-  if(!user){showToast('Connectez-vous d'abord','warning');return;}
+  if(!user){showToast('Connectez-vous dabord','warning');return;}
   cpOldBuf=''; cpNewBuf=''; cpConfBuf='';
   document.getElementById('change-pin-user').textContent='Utilisateur : '+user;
   document.getElementById('change-pin-step1').style.display='block';
@@ -1179,7 +1179,7 @@ function checkOldPin(){
   const u=users.find(x=>x.name===user);
   if(!u){closeChangePinModal();return;}
   if(cpOldBuf===(u.pin||DEFAULT_PIN)){
-    // Bon ancien PIN → passer à l'étape 2
+    // Bon ancien PIN -> passer etape 2
     document.getElementById('change-pin-step1').style.display='none';
     document.getElementById('change-pin-step2').style.display='block';
     cpOldBuf='';
