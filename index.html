@@ -611,9 +611,28 @@ function getUsers(){try{return JSON.parse(localStorage.getItem('stock_users_v2')
 function saveUsers(list){localStorage.setItem('stock_users_v2',JSON.stringify(list));}
 
 function initLogin(){
-  // Créer David par défaut si liste vide
+  // Créer la liste par défaut si vide
   if(!getUsers().length){
-    saveUsers([{name:'David',pin:'5238'}]);
+    saveUsers([
+      {name:'David',    pin:'5238'},
+      {name:'Mélanie',  pin:'0000'},
+      {name:'Yann',     pin:'0000'},
+      {name:'Jean-Luc', pin:'0000'},
+      {name:'Pierre',   pin:'0000'},
+      {name:'Pierrick', pin:'0000'},
+      {name:'Manon',    pin:'0000'},
+      {name:'Pauline',  pin:'0000'},
+      {name:'Steve',    pin:'0000'},
+      {name:'Kévin',    pin:'0000'},
+      {name:'Halil can',pin:'0000'},
+      {name:'Halil',    pin:'0000'},
+      {name:'Quentin',  pin:'0000'},
+      {name:'Nicolas',  pin:'0000'},
+      {name:'Lionel',   pin:'0000'},
+      {name:'William',  pin:'0000'},
+      {name:'Fabien',   pin:'0000'},
+      {name:'Melody',   pin:'0000'},
+    ]);
   }
   populateLoginSelect();
   // Auto-login si session active
