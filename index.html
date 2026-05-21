@@ -338,6 +338,7 @@ tbody td{padding:11px 14px;font-size:0.88rem;vertical-align:middle;}
     </div>
   </div>
   <div class="header-actions">
+    <button class="btn btn-ghost btn-sm" onclick="showChangePinModal()">🔑 Mon PIN</button>
     <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📤 CSV</button>
     <button class="btn btn-ghost btn-sm" onclick="forcSync()">🔄 Sync</button>
   </div>
@@ -1113,13 +1114,180 @@ function importUsers(input){
   input.value='';
 }
 
+// ════ CHANGER PIN ════
+let cpOldBuf='', cpNewBuf='', cpConfBuf='';
+
+function showChangePinModal(){
+  const user = localStorage.getItem('stock_session');
+  if(!user){showToast('Connectez-vous d'abord','warning');return;}
+  cpOldBuf=''; cpNewBuf=''; cpConfBuf='';
+  document.getElementById('change-pin-user').textContent='Utilisateur : '+user;
+  document.getElementById('change-pin-step1').style.display='block';
+  document.getElementById('change-pin-step2').style.display='none';
+  updateDots('cpold-','',false);
+  updateDots('cpnew-','',false);
+  updateDots('cpconf-','',false);
+  document.getElementById('cp-err-old').textContent='';
+  document.getElementById('cp-err-new').textContent='';
+  document.getElementById('amodal-change-pin').classList.add('open');
+}
+
+function closeChangePinModal(){
+  document.getElementById('amodal-change-pin').classList.remove('open');
+  cpOldBuf=''; cpNewBuf=''; cpConfBuf='';
+}
+
+function cpPress(step, d){
+  if(step==='old'){
+    if(cpOldBuf.length>=4) return;
+    cpOldBuf+=d;
+    updateDots('cpold-',cpOldBuf,false);
+    if(cpOldBuf.length===4) setTimeout(()=>checkOldPin(),150);
+  } else {
+    // Remplir nouveau puis confirmation
+    if(cpNewBuf.length<4){
+      cpNewBuf+=d;
+      updateDots('cpnew-',cpNewBuf,false);
+    } else if(cpConfBuf.length<4){
+      cpConfBuf+=d;
+      updateDots('cpconf-',cpConfBuf,false);
+      if(cpConfBuf.length===4) setTimeout(()=>checkNewPin(),150);
+    }
+  }
+}
+
+function cpDel(step){
+  if(step==='old'){
+    cpOldBuf=cpOldBuf.slice(0,-1);
+    updateDots('cpold-',cpOldBuf,false);
+    document.getElementById('cp-err-old').textContent='';
+  } else {
+    if(cpConfBuf.length>0){
+      cpConfBuf=cpConfBuf.slice(0,-1);
+      updateDots('cpconf-',cpConfBuf,false);
+    } else if(cpNewBuf.length>0){
+      cpNewBuf=cpNewBuf.slice(0,-1);
+      updateDots('cpnew-',cpNewBuf,false);
+    }
+    document.getElementById('cp-err-new').textContent='';
+  }
+}
+
+function checkOldPin(){
+  const user=localStorage.getItem('stock_session');
+  const users=getUsers();
+  const u=users.find(x=>x.name===user);
+  if(!u){closeChangePinModal();return;}
+  if(cpOldBuf===(u.pin||DEFAULT_PIN)){
+    // Bon ancien PIN → passer à l'étape 2
+    document.getElementById('change-pin-step1').style.display='none';
+    document.getElementById('change-pin-step2').style.display='block';
+    cpOldBuf='';
+  } else {
+    for(let i=0;i<4;i++) document.getElementById('cpold-'+i).className='pin-dot error';
+    document.getElementById('cp-err-old').textContent='Ancien PIN incorrect.';
+    setTimeout(()=>{cpOldBuf='';updateDots('cpold-','',false);document.getElementById('cp-err-old').textContent='';},900);
+  }
+}
+
+function checkNewPin(){
+  if(cpNewBuf!==cpConfBuf){
+    for(let i=0;i<4;i++) document.getElementById('cpconf-'+i).className='pin-dot error';
+    document.getElementById('cp-err-new').textContent='Les PIN ne correspondent pas.';
+    setTimeout(()=>{cpConfBuf='';updateDots('cpconf-','',false);document.getElementById('cp-err-new').textContent='';},900);
+    return;
+  }
+  if(cpNewBuf.length!==4||isNaN(cpNewBuf)){
+    document.getElementById('cp-err-new').textContent='PIN invalide.';return;
+  }
+  // Sauvegarder le nouveau PIN
+  const user=localStorage.getItem('stock_session');
+  const users=getUsers();
+  const idx=users.findIndex(x=>x.name===user);
+  if(idx>=0){
+    users[idx].pin=cpNewBuf;
+    saveUsers(users);
+    closeChangePinModal();
+    showToast('🔑 PIN modifié avec succès !','info');
+  }
+}
+
 // ════ INIT ════
 initLogin();
 loadFromCloud();
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();document.getElementById('amodal-login').classList.remove('open');document.getElementById('amodal-panel').classList.remove('open');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();document.getElementById('amodal-login').classList.remove('open');document.getElementById('amodal-panel').classList.remove('open');
+  document.getElementById('amodal-change-pin').classList.remove('open');}});
 document.getElementById('m-qty').addEventListener('keydown',e=>{if(e.key==='Enter')confirmMvt();});
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 document.getElementById('new-user-name').addEventListener('keydown',e=>{if(e.key==='Enter')adminAddUser();});
 </script>
+
+<!-- MODAL CHANGER PIN -->
+<div class="amodal" id="amodal-change-pin">
+  <div class="amodal-box" style="max-width:340px;text-align:center">
+    <div style="font-size:2rem;margin-bottom:10px">🔑</div>
+    <div style="font-size:1.1rem;font-weight:800;color:var(--primary);margin-bottom:5px">Changer mon PIN</div>
+    <div style="font-size:0.84rem;color:var(--text-muted);margin-bottom:18px" id="change-pin-user"></div>
+
+    <div id="change-pin-step1">
+      <div class="pin-label">Ancien PIN</div>
+      <div class="pin-dots" id="cp-dots-old">
+        <div class="pin-dot" id="cpold-0"></div>
+        <div class="pin-dot" id="cpold-1"></div>
+        <div class="pin-dot" id="cpold-2"></div>
+        <div class="pin-dot" id="cpold-3"></div>
+      </div>
+      <div class="login-error" id="cp-err-old"></div>
+      <div class="pin-pad">
+        <button class="pin-btn" onclick="cpPress('old','1')">1</button>
+        <button class="pin-btn" onclick="cpPress('old','2')">2</button>
+        <button class="pin-btn" onclick="cpPress('old','3')">3</button>
+        <button class="pin-btn" onclick="cpPress('old','4')">4</button>
+        <button class="pin-btn" onclick="cpPress('old','5')">5</button>
+        <button class="pin-btn" onclick="cpPress('old','6')">6</button>
+        <button class="pin-btn" onclick="cpPress('old','7')">7</button>
+        <button class="pin-btn" onclick="cpPress('old','8')">8</button>
+        <button class="pin-btn" onclick="cpPress('old','9')">9</button>
+        <button class="pin-btn empty"></button>
+        <button class="pin-btn" onclick="cpPress('old','0')">0</button>
+        <button class="pin-btn" onclick="cpDel('old')">⌫</button>
+      </div>
+    </div>
+
+    <div id="change-pin-step2" style="display:none">
+      <div class="pin-label">Nouveau PIN</div>
+      <div class="pin-dots" id="cp-dots-new">
+        <div class="pin-dot" id="cpnew-0"></div>
+        <div class="pin-dot" id="cpnew-1"></div>
+        <div class="pin-dot" id="cpnew-2"></div>
+        <div class="pin-dot" id="cpnew-3"></div>
+      </div>
+      <div class="pin-label" style="margin-top:14px">Confirmer le nouveau PIN</div>
+      <div class="pin-dots" id="cp-dots-confirm">
+        <div class="pin-dot" id="cpconf-0"></div>
+        <div class="pin-dot" id="cpconf-1"></div>
+        <div class="pin-dot" id="cpconf-2"></div>
+        <div class="pin-dot" id="cpconf-3"></div>
+      </div>
+      <div class="login-error" id="cp-err-new"></div>
+      <div class="pin-pad">
+        <button class="pin-btn" onclick="cpPress('new','1')">1</button>
+        <button class="pin-btn" onclick="cpPress('new','2')">2</button>
+        <button class="pin-btn" onclick="cpPress('new','3')">3</button>
+        <button class="pin-btn" onclick="cpPress('new','4')">4</button>
+        <button class="pin-btn" onclick="cpPress('new','5')">5</button>
+        <button class="pin-btn" onclick="cpPress('new','6')">6</button>
+        <button class="pin-btn" onclick="cpPress('new','7')">7</button>
+        <button class="pin-btn" onclick="cpPress('new','8')">8</button>
+        <button class="pin-btn" onclick="cpPress('new','9')">9</button>
+        <button class="pin-btn empty"></button>
+        <button class="pin-btn" onclick="cpPress('new','0')">0</button>
+        <button class="pin-btn" onclick="cpDel('new')">⌫</button>
+      </div>
+    </div>
+
+    <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="closeChangePinModal()">Annuler</button>
+  </div>
+</div>
 </body>
 </html>
