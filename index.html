@@ -312,8 +312,13 @@ tbody td{padding:11px 14px;font-size:0.88rem;vertical-align:middle;}
     </div>
     <div style="font-weight:700;color:var(--primary);margin-bottom:10px;font-size:0.88rem">👥 Utilisateurs</div>
     <div id="admin-users-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="exportUsers()">📤 Exporter la liste</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-users-file').click()">📂 Importer une liste</button>
+      <input type="file" id="import-users-file" accept=".json" style="display:none" onchange="importUsers(this)">
+    </div>
     <div style="background:var(--amber-bg);border-radius:8px;padding:10px 14px;font-size:0.81rem;color:var(--amber)">
-      💡 PIN par défaut pour les nouveaux utilisateurs : <strong>0000</strong>. Changez-le après la première connexion.
+      💡 PIN par défaut : <strong>0000</strong>. Exportez la liste après chaque modification et importez-la sur les autres postes.
     </div>
   </div>
 </div>
@@ -1070,6 +1075,42 @@ function checkURL(){
     else showToast('Référence introuvable','warning');
     history.replaceState({},'',location.pathname);
   }
+}
+
+// ════ EXPORT/IMPORT UTILISATEURS ════
+function exportUsers(){
+  const users = getUsers();
+  if(!users.length){showToast('Aucun utilisateur à exporter','warning');return;}
+  const data = JSON.stringify({users, exportDate: new Date().toISOString()}, null, 2);
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
+  a.download = 'utilisateurs_stock_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  showToast('📤 Liste exportée !','info');
+}
+
+function importUsers(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data.users||!Array.isArray(data.users)) throw new Error();
+      const existing = getUsers();
+      let added = 0;
+      data.users.forEach(u => {
+        if(!existing.find(e=>e.name===u.name)){
+          existing.push(u); added++;
+        }
+      });
+      saveUsers(existing);
+      renderAdminUsers();
+      populateLoginSelect();
+      showToast('✅ '+added+' utilisateur(s) importé(s) !','info');
+    }catch{ showToast('❌ Fichier invalide','warning'); }
+  };
+  reader.readAsText(file);
+  input.value='';
 }
 
 // ════ INIT ════
