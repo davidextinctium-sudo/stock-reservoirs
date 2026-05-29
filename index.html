@@ -3,219 +3,270 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestion Stock — Réservoirs Reconditionnés</title>
+<title>Gestion Stock — EXTINCTIUM</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 :root {
-  --primary:#0f3460;--accent:#e94560;
-  --green:#16a34a;--green-bg:#dcfce7;
-  --red:#dc2626;--red-bg:#fee2e2;
-  --amber:#d97706;--amber-bg:#fef3c7;
-  --purple:#7c3aed;--purple-bg:#ede9fe;
-  --bg:#f1f5f9;--surface:#ffffff;
-  --border:#e2e8f0;--text:#0f172a;--text-muted:#64748b;
-  --shadow-sm:0 1px 3px rgba(0,0,0,0.08);--radius:10px;
+  --c1:#0f3460; --c1l:#1e4d8c; --c1bg:#e8f0fb;
+  --c2:#92400e; --c2l:#b45309; --c2bg:#fff7ed;
+  --c3:#14532d; --c3l:#166534; --c3bg:#f0fdf4;
+  --green:#16a34a; --green-bg:#dcfce7;
+  --red:#dc2626; --red-bg:#fee2e2;
+  --amber:#d97706; --amber-bg:#fef3c7;
+  --purple:#7c3aed; --purple-bg:#ede9fe;
+  --bg:#f1f5f9; --surface:#fff;
+  --border:#e2e8f0; --text:#0f172a; --text-muted:#64748b;
+  --radius:10px;
+  /* active space colors — updated by JS */
+  --space-primary: var(--c1);
+  --space-accent: var(--c1l);
+  --space-bg: var(--c1bg);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
 
 /* LOGIN */
-.login-page{position:fixed;inset:0;background:var(--primary);display:flex;align-items:center;justify-content:center;z-index:2000;}
+.login-page{position:fixed;inset:0;background:var(--c1);display:flex;align-items:center;justify-content:center;z-index:2000;}
 .login-box{background:white;border-radius:16px;padding:36px 32px;width:90%;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
 .login-logo{font-size:2.8rem;margin-bottom:10px;}
-.login-title{font-size:1.3rem;font-weight:800;color:var(--primary);margin-bottom:4px;}
+.login-title{font-size:1.3rem;font-weight:800;color:var(--c1);margin-bottom:4px;}
 .login-sub{font-size:0.82rem;color:var(--text-muted);margin-bottom:22px;}
 .login-select{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-size:0.95rem;color:var(--text);background:var(--surface);margin-bottom:16px;}
-.login-select:focus{outline:none;border-color:var(--primary);}
 .pin-label{font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;}
 .pin-dots{display:flex;justify-content:center;gap:14px;margin-bottom:16px;}
 .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:white;transition:all 0.15s;}
-.pin-dot.filled{background:var(--primary);border-color:var(--primary);}
+.pin-dot.filled{background:var(--c1);border-color:var(--c1);}
 .pin-dot.error{background:var(--red);border-color:var(--red);animation:shake 0.3s ease;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
 .pin-btn{padding:15px;font-size:1.1rem;font-weight:700;border:1.5px solid var(--border);border-radius:10px;background:white;color:var(--text);cursor:pointer;transition:all 0.15s;}
-.pin-btn:hover{background:var(--bg);border-color:var(--primary);color:var(--primary);}
+.pin-btn:hover{background:var(--bg);border-color:var(--c1);color:var(--c1);}
 .pin-btn:active{transform:scale(0.95);}
 .pin-btn.empty{visibility:hidden;}
 .login-error{color:var(--red);font-size:0.82rem;margin-bottom:10px;min-height:18px;}
 
-/* ADMIN MODALS */
-.amodal{display:none;position:fixed;inset:0;background:rgba(15,52,96,0.5);z-index:3000;align-items:center;justify-content:center;}
-.amodal.open{display:flex;}
-.amodal-box{background:white;border-radius:14px;padding:28px 30px;width:90%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+/* SPACE SELECTOR */
+.space-selector{position:fixed;inset:0;background:var(--c1);display:none;align-items:center;justify-content:center;z-index:1900;flex-direction:column;gap:24px;}
+.space-selector.open{display:flex;}
+.space-selector h2{color:white;font-size:1.4rem;font-weight:800;margin-bottom:8px;}
+.space-selector p{color:rgba(255,255,255,0.7);font-size:0.9rem;margin-bottom:16px;text-align:center;}
+.space-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;width:90%;max-width:760px;}
+.space-card{background:white;border-radius:14px;padding:28px 24px;text-align:center;cursor:pointer;transition:all 0.2s;box-shadow:0 8px 24px rgba(0,0,0,0.15);}
+.space-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,0.2);}
+.space-card .sc-icon{font-size:3rem;margin-bottom:12px;}
+.space-card .sc-title{font-size:1rem;font-weight:800;margin-bottom:6px;}
+.space-card .sc-sub{font-size:0.8rem;color:var(--text-muted);}
+.space-card.s1{border-top:5px solid var(--c1);}
+.space-card.s1 .sc-title{color:var(--c1);}
+.space-card.s2{border-top:5px solid var(--c2);}
+.space-card.s2 .sc-title{color:var(--c2);}
+.space-card.s3{border-top:5px solid var(--c3);}
+.space-card.s3 .sc-title{color:var(--c3);}
 
 /* HEADER */
-.header{background:var(--primary);color:white;padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,0.25);position:sticky;top:0;z-index:100;}
-.header-brand{display:flex;align-items:center;gap:12px;}
-.header-logo{width:36px;height:36px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;}
-.header-title{font-size:1rem;font-weight:700;}
-.header-sub{font-size:0.72rem;opacity:0.7;margin-top:1px;display:flex;align-items:center;gap:6px;}
-.sync-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;}
+.header{color:white;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;transition:background 0.3s;}
+.header.s1{background:var(--c1);}
+.header.s2{background:var(--c2);}
+.header.s3{background:var(--c3);}
+.header-brand{display:flex;align-items:center;gap:10px;}
+.header-logo{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:16px;}
+.header-title{font-size:0.95rem;font-weight:700;}
+.header-sub{font-size:0.7rem;opacity:0.7;margin-top:1px;display:flex;align-items:center;gap:5px;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;}
 .sync-dot.syncing{background:#f59e0b;animation:pulse 1s infinite;}
 .sync-dot.error{background:#ef4444;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.header-actions{display:flex;gap:8px;}
+.header-actions{display:flex;gap:6px;align-items:center;}
 
-/* BOUTONS */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;border:none;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
-.btn-ghost{background:rgba(255,255,255,0.12);color:white;border:1px solid rgba(255,255,255,0.2);}
-.btn-ghost:hover{background:rgba(255,255,255,0.22);}
-.btn-green{background:var(--green);color:white;}
-.btn-green:hover{filter:brightness(1.1);}
-.btn-red{background:var(--red);color:white;}
-.btn-red:hover{filter:brightness(1.1);}
-.btn-primary{background:var(--accent);color:white;}
-.btn-primary:hover{filter:brightness(1.1);}
-.btn-outline{background:white;color:var(--text);border:1.5px solid var(--border);}
-.btn-outline:hover{border-color:var(--primary);color:var(--primary);}
-.btn-sm{padding:5px 10px;font-size:0.78rem;}
+/* SPACE TABS */
+.space-tabs{display:flex;padding:0;border-bottom:none;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+.space-tab{flex:1;padding:16px 8px;font-size:0.92rem;font-weight:800;border:none;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;border-bottom:5px solid transparent;}
+.space-tab:hover{filter:brightness(1.08);}
+#tab-s1{background:#1e4d8c;color:white;border-bottom-color:#a8c4f0;}
+#tab-s2{background:#b45309;color:white;border-bottom-color:#fcd5a0;}
+#tab-s3{background:#166534;color:white;border-bottom-color:#a0f0c0;}
+.space-tab.active-s1{background:var(--c1);color:white;border-bottom-color:white;box-shadow:inset 0 -4px 0 rgba(255,255,255,0.5);transform:scaleY(1.04);}
+.space-tab.active-s2{background:var(--c2);color:white;border-bottom-color:white;box-shadow:inset 0 -4px 0 rgba(255,255,255,0.5);transform:scaleY(1.04);}
+.space-tab.active-s3{background:var(--c3);color:white;border-bottom-color:white;box-shadow:inset 0 -4px 0 rgba(255,255,255,0.5);transform:scaleY(1.04);}
 
 /* NAV */
-.nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 28px;gap:4px;overflow-x:auto;}
-.nav-btn{background:none;border:none;cursor:pointer;padding:14px 16px;font-size:0.85rem;font-weight:500;color:var(--text-muted);border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;transition:all 0.15s;white-space:nowrap;}
-.nav-btn:hover{color:var(--primary);}
-.nav-btn.active{color:var(--primary);border-bottom-color:var(--accent);font-weight:700;}
-.nav-badge{border-radius:20px;padding:1px 7px;font-size:0.7rem;font-weight:700;color:white;}
+.nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 24px;gap:2px;overflow-x:auto;}
+.nav-btn{background:none;border:none;cursor:pointer;padding:12px 14px;font-size:0.82rem;font-weight:500;color:var(--text-muted);border-bottom:2px solid transparent;display:flex;align-items:center;gap:5px;transition:all 0.15s;white-space:nowrap;}
+.nav-btn:hover{color:var(--text);}
+.nav-btn.active{font-weight:700;}
+.nav-btn.active.s1{color:var(--c1);border-bottom-color:var(--c1);}
+.nav-btn.active.s2{color:var(--c2);border-bottom-color:var(--c2);}
+.nav-btn.active.s3{color:var(--c3);border-bottom-color:var(--c3);}
+.nav-badge{border-radius:20px;padding:1px 6px;font-size:0.68rem;font-weight:700;color:white;background:var(--red);}
 
 /* PAGES */
-.page{display:none;padding:24px 28px;max-width:1400px;margin:0 auto;}
+.page{display:none;padding:20px 24px;max-width:1400px;margin:0 auto;}
 .page.active{display:block;}
 
 /* STATS */
-.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:22px;}
-.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
-.stat-val{font-size:2rem;font-weight:800;color:var(--primary);line-height:1;}
-.stat-lbl{font-size:0.72rem;color:var(--text-muted);margin-top:5px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;}
-.stat-icon{font-size:1.3rem;margin-bottom:6px;}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:18px;}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.stat-val{font-size:1.8rem;font-weight:800;line-height:1;}
+.stat-val.s1{color:var(--c1);}
+.stat-val.s2{color:var(--c2);}
+.stat-val.s3{color:var(--c3);}
+.stat-lbl{font-size:0.7rem;color:var(--text-muted);margin-top:4px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;}
+.stat-icon{font-size:1.2rem;margin-bottom:5px;}
 
 /* CARD */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);margin-bottom:20px;}
-.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
-.card-title{font-size:0.95rem;font-weight:700;color:var(--primary);}
-.card-body{padding:20px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:18px;}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.card-title{font-size:0.92rem;font-weight:700;}
+.card-title.s1{color:var(--c1);}
+.card-title.s2{color:var(--c2);}
+.card-title.s3{color:var(--c3);}
+.card-body{padding:18px;}
 
 /* TABLE */
 .tbl-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;}
-thead th{background:#f8fafc;padding:10px 14px;text-align:left;font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);}
+thead th{background:#f8fafc;padding:9px 12px;text-align:left;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);}
 tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s;}
 tbody tr:last-child{border-bottom:none;}
 tbody tr:hover{background:#f8fafc;}
-tbody td{padding:11px 14px;font-size:0.88rem;vertical-align:middle;}
-.family-sep td{background:#f0f4ff;font-size:0.75rem;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.8px;padding:6px 14px;}
+tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
+.family-sep td{font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;padding:5px 12px;}
+.family-sep.s1 td{background:var(--c1bg);color:var(--c1);}
+.family-sep.s2 td{background:var(--c2bg);color:var(--c2);}
+.family-sep.s3 td{background:var(--c3bg);color:var(--c3);}
 
 /* BADGES */
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:0.75rem;font-weight:700;}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:0.72rem;font-weight:700;}
 .badge-ok{background:var(--green-bg);color:var(--green);}
 .badge-low{background:var(--amber-bg);color:var(--amber);}
 .badge-zero{background:var(--red-bg);color:var(--red);}
 
+/* BTNS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;border:none;font-size:0.8rem;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.btn-green{background:var(--green);color:white;}
+.btn-green:hover{filter:brightness(1.1);}
+.btn-red{background:var(--red);color:white;}
+.btn-red:hover{filter:brightness(1.1);}
+.btn-ghost{background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.25);}
+.btn-ghost:hover{background:rgba(255,255,255,0.25);}
+.btn-outline{background:white;color:var(--text);border:1.5px solid var(--border);}
+.btn-outline:hover{border-color:var(--c1);color:var(--c1);}
+.btn-s1{background:var(--c1);color:white;}
+.btn-s1:hover{background:var(--c1l);}
+.btn-s2{background:var(--c2);color:white;}
+.btn-s2:hover{background:var(--c2l);}
+.btn-s3{background:var(--c3);color:white;}
+.btn-s3:hover{background:var(--c3l);}
+.btn-sm{padding:4px 10px;font-size:0.76rem;}
+
 /* SEARCH */
-.search-bar{display:flex;align-items:center;gap:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;}
-.search-bar input{border:none;background:none;outline:none;font-size:0.87rem;color:var(--text);width:180px;}
+.search-bar{display:flex;align-items:center;gap:7px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:6px 11px;}
+.search-bar input{border:none;background:none;outline:none;font-size:0.85rem;color:var(--text);width:160px;}
 
 /* QR */
-.qr-toolbar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-.qr-toolbar-info{flex:1;min-width:200px;font-size:0.84rem;color:var(--text-muted);line-height:1.5;}
-.qr-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
+.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
 .qr-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
-.qr-card-header{background:var(--primary);color:white;padding:11px 15px;}
-.qr-card-desig{font-weight:700;font-size:0.92rem;}
-.qr-card-famille{font-size:0.72rem;opacity:0.7;margin-top:2px;}
+.qr-card-hdr{color:white;padding:10px 14px;}
+.qr-card-hdr.s1{background:var(--c1);}
+.qr-card-hdr.s2{background:var(--c2);}
+.qr-card-hdr.s3{background:var(--c3);}
+.qr-card-desig{font-weight:700;font-size:0.9rem;}
+.qr-card-fam{font-size:0.7rem;opacity:0.75;margin-top:1px;}
 .qr-pair{display:grid;grid-template-columns:1fr 1fr;}
-.qr-half{padding:14px 10px;text-align:center;border-right:1px solid var(--border);}
+.qr-half{padding:12px 10px;text-align:center;border-right:1px solid var(--border);}
 .qr-half:last-child{border-right:none;}
-.qr-type-label{display:inline-flex;align-items:center;gap:4px;font-size:0.75rem;font-weight:700;padding:3px 9px;border-radius:6px;margin-bottom:8px;}
-.qr-type-entree{background:var(--green-bg);color:var(--green);}
-.qr-type-sortie{background:var(--red-bg);color:var(--red);}
-.qr-canvas-wrap{display:flex;justify-content:center;margin-bottom:5px;}
-.qr-hint{font-size:0.68rem;color:var(--text-muted);}
-.qr-stock-info{font-size:0.73rem;font-weight:700;color:var(--primary);padding:7px 12px;border-top:1px solid var(--border);text-align:center;}
-.print-family-header{display:none;}
+.qr-type-label{display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:5px;margin-bottom:8px;}
+.qr-type-e{background:var(--green-bg);color:var(--green);}
+.qr-type-s{background:var(--red-bg);color:var(--red);}
+.qr-canvas-wrap{display:flex;justify-content:center;margin-bottom:4px;}
+.qr-hint{font-size:0.65rem;color:var(--text-muted);}
+.qr-stock{font-size:0.72rem;font-weight:700;padding:6px 10px;border-top:1px solid var(--border);text-align:center;}
+.print-fam-hdr{display:none;}
 
 /* HISTO */
-.histo-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);}
+.histo-item{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--border);}
 .histo-item:last-child{border-bottom:none;}
-.histo-dot{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;}
+.histo-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;}
 .histo-dot.entree{background:var(--green-bg);}
 .histo-dot.sortie{background:var(--red-bg);}
 .histo-body{flex:1;min-width:0;}
-.histo-ref{font-weight:700;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.histo-meta{font-size:0.76rem;color:var(--text-muted);margin-top:2px;}
-.histo-qty{font-weight:800;font-size:0.95rem;flex-shrink:0;}
+.histo-ref{font-weight:700;font-size:0.87rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.histo-meta{font-size:0.74rem;color:var(--text-muted);margin-top:1px;}
+.histo-qty{font-weight:800;font-size:0.92rem;flex-shrink:0;}
 .histo-qty.entree{color:var(--green);}
 .histo-qty.sortie{color:var(--red);}
-.histo-date{font-size:0.73rem;color:var(--text-muted);flex-shrink:0;text-align:right;min-width:110px;}
+.histo-date{font-size:0.71rem;color:var(--text-muted);flex-shrink:0;text-align:right;min-width:100px;}
 
 /* FORM */
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.form-group{display:flex;flex-direction:column;gap:6px;}
-.form-group label{font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;}
-.form-group input,.form-group select{padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;color:var(--text);background:var(--surface);}
-.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--primary);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group label{font-size:0.76rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;}
+.form-group input,.form-group select{padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;color:var(--text);background:var(--surface);}
+.form-group input:focus,.form-group select:focus{outline:none;}
 
-/* MODAL MOUVEMENT */
+/* MODAL MVT */
 .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(15,52,96,0.45);backdrop-filter:blur(2px);z-index:500;align-items:center;justify-content:center;}
 .modal-backdrop.open{display:flex;}
-.modal-box{background:var(--surface);border-radius:14px;padding:28px 30px;width:90%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:modalIn 0.18s ease;}
+.modal-box{background:var(--surface);border-radius:14px;padding:26px 28px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:modalIn 0.18s ease;}
 @keyframes modalIn{from{transform:scale(0.95);opacity:0}to{transform:scale(1);opacity:1}}
-.modal-title{font-size:1.1rem;font-weight:800;color:var(--primary);}
-.modal-subtitle{font-size:0.84rem;color:var(--text-muted);margin-top:3px;}
-.modal-banner{margin:14px 0;padding:11px 15px;border-radius:8px;font-size:0.87rem;font-weight:600;}
+.modal-title{font-size:1.05rem;font-weight:800;}
+.modal-subtitle{font-size:0.82rem;color:var(--text-muted);margin-top:2px;}
+.modal-banner{margin:13px 0;padding:10px 14px;border-radius:8px;font-size:0.85rem;font-weight:600;}
 .modal-banner.entree{background:var(--green-bg);color:var(--green);}
 .modal-banner.sortie{background:var(--red-bg);color:var(--red);}
-.modal-qty-lbl{font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;}
-.modal-qty-input{width:100%;padding:14px;text-align:center;font-size:1.8rem;font-weight:800;border:2px solid var(--border);border-radius:10px;color:var(--primary);background:#f8fafc;}
-.modal-qty-input:focus{outline:none;border-color:var(--primary);background:white;}
-.modal-stock-info{font-size:0.81rem;color:var(--text-muted);margin:8px 0 18px;}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;}
-.modal-error{background:var(--red-bg);color:var(--red);padding:9px 13px;border-radius:8px;font-size:0.84rem;margin-bottom:12px;display:none;}
+.modal-qty-lbl{font-size:0.76rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:7px;}
+.modal-qty-input{width:100%;padding:13px;text-align:center;font-size:1.7rem;font-weight:800;border:2px solid var(--border);border-radius:10px;color:var(--text);background:#f8fafc;}
+.modal-qty-input:focus{outline:none;border-color:var(--c1);background:white;}
+.modal-stock-info{font-size:0.79rem;color:var(--text-muted);margin:7px 0 16px;}
+.modal-footer{display:flex;gap:9px;justify-content:flex-end;}
+.modal-error{background:var(--red-bg);color:var(--red);padding:8px 12px;border-radius:7px;font-size:0.82rem;margin-bottom:11px;display:none;}
+
+/* ADMIN MODALS */
+.amodal{display:none;position:fixed;inset:0;background:rgba(15,52,96,0.5);z-index:3000;align-items:center;justify-content:center;}
+.amodal.open{display:flex;}
+.amodal-box{background:white;border-radius:14px;padding:26px 28px;width:90%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
 
 /* TOAST */
-.toast{position:fixed;top:70px;right:18px;z-index:999;padding:11px 18px;border-radius:10px;font-weight:700;font-size:0.88rem;box-shadow:0 4px 16px rgba(0,0,0,0.1);display:flex;align-items:center;gap:8px;animation:toastIn 0.2s ease;max-width:300px;}
+.toast{position:fixed;top:66px;right:16px;z-index:999;padding:10px 16px;border-radius:10px;font-weight:700;font-size:0.87rem;box-shadow:0 4px 16px rgba(0,0,0,0.1);display:flex;align-items:center;gap:7px;animation:toastIn 0.2s ease;max-width:300px;}
 @keyframes toastIn{from{transform:translateX(120%)}to{transform:translateX(0)}}
 .toast.entree{background:var(--green-bg);color:var(--green);border-left:4px solid var(--green);}
 .toast.sortie{background:var(--red-bg);color:var(--red);border-left:4px solid var(--red);}
-.toast.info{background:#eff6ff;color:var(--primary);border-left:4px solid var(--primary);}
+.toast.info{background:#eff6ff;color:var(--c1);border-left:4px solid var(--c1);}
 .toast.warning{background:var(--amber-bg);color:var(--amber);border-left:4px solid var(--amber);}
 
 /* MISC */
-.empty{text-align:center;padding:36px 20px;color:var(--text-muted);}
-.empty-icon{font-size:2.3rem;margin-bottom:10px;}
-.alert{padding:11px 15px;border-radius:8px;font-size:0.87rem;margin-bottom:14px;font-weight:500;}
+.empty{text-align:center;padding:32px 16px;color:var(--text-muted);}
+.empty-icon{font-size:2.2rem;margin-bottom:8px;}
+.alert{padding:10px 14px;border-radius:8px;font-size:0.85rem;margin-bottom:12px;font-weight:500;}
 .alert-ok{background:var(--green-bg);color:var(--green);}
 .alert-err{background:var(--red-bg);color:var(--red);}
-.archive-banner{background:var(--purple-bg);border:1px solid #c4b5fd;border-radius:var(--radius);padding:13px 17px;margin-bottom:18px;display:flex;align-items:center;gap:12px;}
-.loading-overlay{position:fixed;inset:0;background:rgba(15,52,96,0.6);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;gap:16px;}
-.loading-spinner{width:46px;height:46px;border:4px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;}
+.loading-overlay{position:fixed;inset:0;background:rgba(15,52,96,0.6);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;gap:14px;}
+.loading-spinner{width:44px;height:44px;border:4px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{font-size:1rem;font-weight:600;}
 
 /* PRINT */
 @media print{
   *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
   body{background:white;}
-  .header,.nav,.qr-toolbar,.no-print{display:none !important;}
-  .page{display:none !important;padding:0 !important;max-width:100% !important;}
+  .header,.space-tabs,.nav,.no-print{display:none !important;}
+  .page{display:none !important;padding:0 !important;}
   #page-qrcodes{display:block !important;}
-  .qr-grid{display:grid !important;grid-template-columns:repeat(2,1fr) !important;gap:8mm !important;padding:8mm !important;}
+  .qr-grid{display:grid !important;grid-template-columns:repeat(2,1fr) !important;gap:7mm !important;padding:7mm !important;}
   .qr-card{break-inside:avoid !important;border:1.5px solid #ccc !important;box-shadow:none !important;}
-  .qr-card-header{background:#0f3460 !important;color:white !important;}
-  .qr-type-entree{background:#dcfce7 !important;color:#16a34a !important;}
-  .qr-type-sortie{background:#fee2e2 !important;color:#dc2626 !important;}
-  .print-family-header{display:block !important;background:#0f3460 !important;color:white !important;padding:6px 12px !important;font-size:0.8rem !important;font-weight:700 !important;grid-column:1/-1 !important;border-radius:6px !important;}
+  .print-fam-hdr{display:block !important;color:white !important;padding:5px 10px !important;font-size:0.75rem !important;font-weight:700 !important;grid-column:1/-1 !important;border-radius:5px !important;}
+  .print-fam-hdr.s1{background:var(--c1) !important;}
+  .print-fam-hdr.s2{background:var(--c2) !important;}
+  .print-fam-hdr.s3{background:var(--c3) !important;}
 }
 @media(max-width:640px){
-  .header{padding:0 14px;}
-  .page{padding:16px 14px;}
+  .header{padding:0 12px;}
+  .page{padding:14px 12px;}
   .form-grid{grid-template-columns:1fr;}
-  .search-bar input{width:120px;}
+  .search-bar input{width:110px;}
   .histo-date{display:none;}
   .qr-grid{grid-template-columns:1fr;}
+  .space-tab span.tab-label{display:none;}
 }
 </style>
 </head>
@@ -224,152 +275,173 @@ tbody td{padding:11px 14px;font-size:0.88rem;vertical-align:middle;}
 <!-- LOADING -->
 <div class="loading-overlay" id="loading">
   <div class="loading-spinner"></div>
-  <div class="loading-text">Chargement…</div>
+  <div style="font-size:1rem;font-weight:600;">Chargement…</div>
 </div>
 
 <!-- PAGE LOGIN -->
 <div class="login-page" id="login-page">
   <div class="login-box">
-    <div class="login-logo">🔴</div>
+    <div class="login-logo">🏭</div>
     <div class="login-title">Gestion Stock</div>
-    <div class="login-sub">Réservoirs Reconditionnés — EXTINCTIUM</div>
+    <div class="login-sub">EXTINCTIUM — Réservoirs</div>
     <select class="login-select" id="login-select" onchange="resetPin()">
       <option value="">-- Sélectionnez votre nom --</option>
     </select>
     <div class="pin-label">Code PIN</div>
     <div class="pin-dots" id="pin-dots">
-      <div class="pin-dot" id="dot-0"></div>
-      <div class="pin-dot" id="dot-1"></div>
-      <div class="pin-dot" id="dot-2"></div>
-      <div class="pin-dot" id="dot-3"></div>
+      <div class="pin-dot" id="dot-0"></div><div class="pin-dot" id="dot-1"></div>
+      <div class="pin-dot" id="dot-2"></div><div class="pin-dot" id="dot-3"></div>
     </div>
     <div class="login-error" id="login-error"></div>
     <div class="pin-pad">
-      <button class="pin-btn" onclick="pinPress('1')">1</button>
-      <button class="pin-btn" onclick="pinPress('2')">2</button>
-      <button class="pin-btn" onclick="pinPress('3')">3</button>
-      <button class="pin-btn" onclick="pinPress('4')">4</button>
-      <button class="pin-btn" onclick="pinPress('5')">5</button>
-      <button class="pin-btn" onclick="pinPress('6')">6</button>
-      <button class="pin-btn" onclick="pinPress('7')">7</button>
-      <button class="pin-btn" onclick="pinPress('8')">8</button>
-      <button class="pin-btn" onclick="pinPress('9')">9</button>
-      <button class="pin-btn empty"></button>
-      <button class="pin-btn" onclick="pinPress('0')">0</button>
-      <button class="pin-btn" onclick="pinDel()">⌫</button>
+      <button class="pin-btn" onclick="pinPress('1')">1</button><button class="pin-btn" onclick="pinPress('2')">2</button><button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button><button class="pin-btn" onclick="pinPress('5')">5</button><button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button><button class="pin-btn" onclick="pinPress('8')">8</button><button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn empty"></button><button class="pin-btn" onclick="pinPress('0')">0</button><button class="pin-btn" onclick="pinDel()">⌫</button>
     </div>
-    <button class="btn btn-outline" style="width:100%;font-size:0.82rem;color:var(--text-muted);margin-top:4px" onclick="showAdminLogin()">🔐 Administration</button>
+    <button class="btn btn-outline" style="width:100%;font-size:0.8rem;color:var(--text-muted);margin-top:4px" onclick="showAdminLogin()">🔐 Administration</button>
   </div>
 </div>
 
-<!-- MODAL ADMIN — SAISIE CODE -->
+<!-- ADMIN LOGIN -->
 <div class="amodal" id="amodal-login">
   <div class="amodal-box" style="max-width:320px;text-align:center">
     <div style="font-size:2rem;margin-bottom:10px">🔐</div>
-    <div style="font-size:1.1rem;font-weight:800;color:var(--primary);margin-bottom:5px">Accès administrateur</div>
+    <div style="font-size:1.1rem;font-weight:800;color:var(--c1);margin-bottom:5px">Accès administrateur</div>
     <div style="font-size:0.84rem;color:var(--text-muted);margin-bottom:18px">Entrez le code admin</div>
     <div class="pin-label">Code Admin</div>
     <div class="pin-dots" id="adots">
-      <div class="pin-dot" id="adot-0"></div>
-      <div class="pin-dot" id="adot-1"></div>
-      <div class="pin-dot" id="adot-2"></div>
-      <div class="pin-dot" id="adot-3"></div>
+      <div class="pin-dot" id="adot-0"></div><div class="pin-dot" id="adot-1"></div>
+      <div class="pin-dot" id="adot-2"></div><div class="pin-dot" id="adot-3"></div>
     </div>
     <div class="login-error" id="admin-login-err"></div>
     <div class="pin-pad">
-      <button class="pin-btn" onclick="adminPinPress('1')">1</button>
-      <button class="pin-btn" onclick="adminPinPress('2')">2</button>
-      <button class="pin-btn" onclick="adminPinPress('3')">3</button>
-      <button class="pin-btn" onclick="adminPinPress('4')">4</button>
-      <button class="pin-btn" onclick="adminPinPress('5')">5</button>
-      <button class="pin-btn" onclick="adminPinPress('6')">6</button>
-      <button class="pin-btn" onclick="adminPinPress('7')">7</button>
-      <button class="pin-btn" onclick="adminPinPress('8')">8</button>
-      <button class="pin-btn" onclick="adminPinPress('9')">9</button>
-      <button class="pin-btn empty"></button>
-      <button class="pin-btn" onclick="adminPinPress('0')">0</button>
-      <button class="pin-btn" onclick="adminPinDel()">⌫</button>
+      <button class="pin-btn" onclick="adminPinPress('1')">1</button><button class="pin-btn" onclick="adminPinPress('2')">2</button><button class="pin-btn" onclick="adminPinPress('3')">3</button>
+      <button class="pin-btn" onclick="adminPinPress('4')">4</button><button class="pin-btn" onclick="adminPinPress('5')">5</button><button class="pin-btn" onclick="adminPinPress('6')">6</button>
+      <button class="pin-btn" onclick="adminPinPress('7')">7</button><button class="pin-btn" onclick="adminPinPress('8')">8</button><button class="pin-btn" onclick="adminPinPress('9')">9</button>
+      <button class="pin-btn empty"></button><button class="pin-btn" onclick="adminPinPress('0')">0</button><button class="pin-btn" onclick="adminPinDel()">⌫</button>
     </div>
     <button class="btn btn-outline" style="width:100%" onclick="closeAdminLogin()">Annuler</button>
   </div>
 </div>
 
-<!-- MODAL ADMIN — PANEL -->
+<!-- ADMIN PANEL -->
 <div class="amodal" id="amodal-panel">
   <div class="amodal-box">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div style="font-size:1.1rem;font-weight:800;color:var(--primary)">🔐 Panel Administrateur</div>
-      <button class="btn btn-outline btn-sm" onclick="closeAdminPanel()">✕ Fermer</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="font-size:1.05rem;font-weight:800;color:var(--c1)">🔐 Panel Administrateur</div>
+      <button class="btn btn-outline btn-sm" onclick="closeAdminPanel()">✕</button>
     </div>
-    <div style="margin-bottom:20px">
-      <div style="font-weight:700;color:var(--primary);margin-bottom:10px;font-size:0.88rem">➕ Ajouter un utilisateur</div>
-      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-        <input id="new-user-name" type="text" placeholder="Prénom ou nom" style="flex:1;min-width:130px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem">
-        <input id="new-user-pin" type="password" placeholder="PIN 4 chiffres" maxlength="4" style="width:130px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;text-align:center;letter-spacing:4px">
-        <button class="btn btn-green" onclick="adminAddUser()">➕</button>
+    <div style="margin-bottom:18px">
+      <div style="font-weight:700;color:var(--c1);margin-bottom:9px;font-size:0.87rem">➕ Ajouter un utilisateur</div>
+      <div style="display:flex;gap:7px;margin-bottom:7px;flex-wrap:wrap">
+        <input id="new-user-name" type="text" placeholder="Prénom ou nom" style="flex:1;min-width:120px;padding:8px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:0.88rem">
+        <input id="new-user-pin" type="password" placeholder="PIN 4 chiffres" maxlength="4" style="width:120px;padding:8px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:0.88rem;text-align:center;letter-spacing:4px">
+        <button class="btn btn-s1 btn-sm" onclick="adminAddUser()">➕</button>
       </div>
-      <div id="admin-add-err" style="color:var(--red);font-size:0.82rem;display:none;margin-bottom:6px"></div>
+      <div id="admin-add-err" style="color:var(--red);font-size:0.8rem;display:none;margin-bottom:5px"></div>
     </div>
-    <div style="font-weight:700;color:var(--primary);margin-bottom:10px;font-size:0.88rem">👥 Utilisateurs</div>
-    <div id="admin-users-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px"></div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="exportUsers()">📤 Exporter la liste</button>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-users-file').click()">📂 Importer une liste</button>
+    <div style="font-weight:700;color:var(--c1);margin-bottom:9px;font-size:0.87rem">👥 Utilisateurs</div>
+    <div id="admin-users-list" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-s1 btn-sm" onclick="exportUsers()">📤 Exporter la liste</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-users-file').click()">📂 Importer</button>
       <input type="file" id="import-users-file" accept=".json" style="display:none" onchange="importUsers(this)">
     </div>
-    <div style="background:var(--amber-bg);border-radius:8px;padding:10px 14px;font-size:0.81rem;color:var(--amber)">
-      💡 PIN par défaut : <strong>0000</strong>. Exportez la liste après chaque modification et importez-la sur les autres postes.
+    <div style="background:var(--amber-bg);border-radius:7px;padding:9px 13px;font-size:0.79rem;color:var(--amber)">
+      💡 PIN par défaut : <strong>0000</strong>
     </div>
   </div>
 </div>
 
-<!-- HEADER -->
-<header class="header">
-  <div class="header-brand">
-    <div class="header-logo">🔴</div>
-    <div>
-      <div class="header-title">Gestion Stock — Réservoirs Reconditionnés</div>
-      <div class="header-sub">
-        <span class="sync-dot" id="sync-dot"></span>
-        <span id="sync-status">Connexion…</span>
-        &nbsp;·&nbsp;
-        <span id="header-user" style="cursor:pointer;text-decoration:underline" onclick="logout()" title="Se déconnecter">👤 —</span>
+<!-- CHANGE PIN MODAL -->
+<div class="amodal" id="amodal-change-pin">
+  <div class="amodal-box" style="max-width:320px;text-align:center">
+    <div style="font-size:1.8rem;margin-bottom:8px">🔑</div>
+    <div style="font-size:1rem;font-weight:800;color:var(--c1);margin-bottom:4px">Changer mon PIN</div>
+    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px" id="change-pin-user"></div>
+    <div id="cp-step1">
+      <div class="pin-label">Ancien PIN</div>
+      <div class="pin-dots" id="cp-dots-old"><div class="pin-dot" id="cpold-0"></div><div class="pin-dot" id="cpold-1"></div><div class="pin-dot" id="cpold-2"></div><div class="pin-dot" id="cpold-3"></div></div>
+      <div class="login-error" id="cp-err-old"></div>
+      <div class="pin-pad">
+        <button class="pin-btn" onclick="cpPress('old','1')">1</button><button class="pin-btn" onclick="cpPress('old','2')">2</button><button class="pin-btn" onclick="cpPress('old','3')">3</button>
+        <button class="pin-btn" onclick="cpPress('old','4')">4</button><button class="pin-btn" onclick="cpPress('old','5')">5</button><button class="pin-btn" onclick="cpPress('old','6')">6</button>
+        <button class="pin-btn" onclick="cpPress('old','7')">7</button><button class="pin-btn" onclick="cpPress('old','8')">8</button><button class="pin-btn" onclick="cpPress('old','9')">9</button>
+        <button class="pin-btn empty"></button><button class="pin-btn" onclick="cpPress('old','0')">0</button><button class="pin-btn" onclick="cpDel('old')">⌫</button>
       </div>
+    </div>
+    <div id="cp-step2" style="display:none">
+      <div class="pin-label">Nouveau PIN</div>
+      <div class="pin-dots" id="cp-dots-new"><div class="pin-dot" id="cpnew-0"></div><div class="pin-dot" id="cpnew-1"></div><div class="pin-dot" id="cpnew-2"></div><div class="pin-dot" id="cpnew-3"></div></div>
+      <div class="pin-label" style="margin-top:12px">Confirmer</div>
+      <div class="pin-dots" id="cp-dots-conf"><div class="pin-dot" id="cpconf-0"></div><div class="pin-dot" id="cpconf-1"></div><div class="pin-dot" id="cpconf-2"></div><div class="pin-dot" id="cpconf-3"></div></div>
+      <div class="login-error" id="cp-err-new"></div>
+      <div class="pin-pad">
+        <button class="pin-btn" onclick="cpPress('new','1')">1</button><button class="pin-btn" onclick="cpPress('new','2')">2</button><button class="pin-btn" onclick="cpPress('new','3')">3</button>
+        <button class="pin-btn" onclick="cpPress('new','4')">4</button><button class="pin-btn" onclick="cpPress('new','5')">5</button><button class="pin-btn" onclick="cpPress('new','6')">6</button>
+        <button class="pin-btn" onclick="cpPress('new','7')">7</button><button class="pin-btn" onclick="cpPress('new','8')">8</button><button class="pin-btn" onclick="cpPress('new','9')">9</button>
+        <button class="pin-btn empty"></button><button class="pin-btn" onclick="cpPress('new','0')">0</button><button class="pin-btn" onclick="cpDel('new')">⌫</button>
+      </div>
+    </div>
+    <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="document.getElementById('amodal-change-pin').classList.remove('open')">Annuler</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="header s1" id="main-header">
+  <div class="header-brand">
+    <div class="header-logo" id="header-logo">🏭</div>
+    <div>
+      <div class="header-title" id="header-title">Gestion Stock</div>
+      <div class="header-sub"><span class="sync-dot" id="sync-dot"></span><span id="sync-status">Connexion…</span>&nbsp;·&nbsp;<span id="header-user" style="cursor:pointer;text-decoration:underline" onclick="logout()">👤 —</span></div>
     </div>
   </div>
   <div class="header-actions">
-    <button class="btn btn-ghost btn-sm" onclick="showChangePinModal()">🔑 Mon PIN</button>
+    <button class="btn btn-ghost btn-sm" onclick="showChangePinModal()">🔑</button>
     <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📤 CSV</button>
-    <button class="btn btn-ghost btn-sm" onclick="forcSync()">🔄 Sync</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportExcel()">📊 Excel</button>
+    <button class="btn btn-ghost btn-sm" onclick="forcSync()">🔄</button>
   </div>
 </header>
 
+<!-- SPACE TABS -->
+<div class="space-tabs">
+  <button class="space-tab" id="tab-s1" onclick="switchSpace(1)">
+    🔵 <span class="tab-label">Reco Non Chargé</span>
+  </button>
+  <button class="space-tab" id="tab-s2" onclick="switchSpace(2)">
+    🟠 <span class="tab-label">Kanban Reco</span>
+  </button>
+  <button class="space-tab" id="tab-s3" onclick="switchSpace(3)">
+    🟢 <span class="tab-label">Kanban Neuf</span>
+  </button>
+</div>
+
 <!-- NAV -->
-<nav class="nav">
-  <button class="nav-btn active" data-page="stock" onclick="goTo(this)">📦 Stock <span class="nav-badge" id="nb-rupture" style="display:none;background:#e94560">0</span></button>
+<nav class="nav" id="main-nav">
+  <button class="nav-btn active" data-page="stock" onclick="goTo(this)">📦 Stock <span class="nav-badge" id="nb-rupture" style="display:none">0</span></button>
   <button class="nav-btn" data-page="qrcodes" onclick="goTo(this)">📲 QR Codes</button>
   <button class="nav-btn" data-page="histo" onclick="goTo(this)">📋 Historique</button>
   <button class="nav-btn" data-page="refs" onclick="goTo(this)">⚙️ Références</button>
-  <button class="nav-btn" data-page="archives" onclick="goTo(this)">🗄️ Archives <span class="nav-badge" id="nb-archives" style="display:none;background:#64748b">0</span></button>
-  <button class="nav-btn" data-page="graphs" onclick="goTo(this)">📊 Graphiques</button>
-  <button class="nav-btn" data-page="params" onclick="goTo(this)">⚙️ Paramètres</button>
+  <button class="nav-btn" data-page="archives" onclick="goTo(this)">🗄️ Archives</button>
 </nav>
 
 <!-- PAGE STOCK -->
 <div class="page active" id="page-stock">
   <div class="stats-row">
-    <div class="stat"><div class="stat-icon">📦</div><div class="stat-val" id="s-total">0</div><div class="stat-lbl">Références</div></div>
-    <div class="stat"><div class="stat-icon">🔢</div><div class="stat-val" id="s-units">0</div><div class="stat-lbl">En stock</div></div>
-    <div class="stat"><div class="stat-icon">⚠️</div><div class="stat-val" id="s-low">0</div><div class="stat-lbl">Stocks bas</div></div>
-    <div class="stat"><div class="stat-icon">🚫</div><div class="stat-val" id="s-zero">0</div><div class="stat-lbl">Ruptures</div></div>
-    <div class="stat"><div class="stat-icon">🗄️</div><div class="stat-val" id="s-arch">0</div><div class="stat-lbl">Archivées</div></div>
+    <div class="stat"><div class="stat-icon">📦</div><div class="stat-val s1" id="s-total">0</div><div class="stat-lbl">Références</div></div>
+    <div class="stat"><div class="stat-icon">🔢</div><div class="stat-val s1" id="s-units">0</div><div class="stat-lbl">En stock</div></div>
+    <div class="stat"><div class="stat-icon">⚠️</div><div class="stat-val s1" id="s-low">0</div><div class="stat-lbl">Stocks bas</div></div>
+    <div class="stat"><div class="stat-icon">🚫</div><div class="stat-val s1" id="s-zero">0</div><div class="stat-lbl">Ruptures</div></div>
+    <div class="stat"><div class="stat-icon">🗄️</div><div class="stat-val s1" id="s-arch">0</div><div class="stat-lbl">Archivées</div></div>
   </div>
   <div class="card">
     <div class="card-header">
-      <span class="card-title">État du stock</span>
+      <span class="card-title s1" id="stock-card-title">État du stock</span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <div class="search-bar"><span>🔍</span><input id="q-stock" placeholder="Rechercher…" oninput="renderStock()"></div>
-        <select id="filtre-stock" onchange="renderStock()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.82rem;color:var(--text)"><option value="">Toutes familles</option></select>
+        <select id="filtre-stock" onchange="renderStock()" style="padding:6px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:0.8rem;color:var(--text)"><option value="">Toutes familles</option></select>
       </div>
     </div>
     <div class="tbl-wrap"><table>
@@ -379,55 +451,57 @@ tbody td{padding:11px 14px;font-size:0.88rem;vertical-align:middle;}
   </div>
 </div>
 
-<!-- PAGE QR CODES -->
+<!-- PAGE QR -->
 <div class="page" id="page-qrcodes">
-  <div class="qr-toolbar no-print">
-    <div class="qr-toolbar-info">📲 Flashez <strong style="color:var(--green)">▲ ENTRÉE</strong> ou <strong style="color:var(--red)">▼ SORTIE</strong> avec votre téléphone. La page s'ouvre et demande la quantité.</div>
-    <div class="qr-controls">
-      <div class="search-bar"><span>🔍</span><input id="q-qr" placeholder="Filtrer…" oninput="renderQR()"></div>
-      <select id="filtre-qr-fam" onchange="renderQR()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.82rem;color:var(--text)"><option value="">Toutes familles</option></select>
-      <button class="btn btn-primary" onclick="printQR()">🖨️ Imprimer</button>
+  <div class="card no-print" style="margin-bottom:16px">
+    <div class="card-body" style="padding:12px 16px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;font-size:0.83rem;color:var(--text-muted)">📲 Flashez <strong style="color:var(--green)">▲ ENTRÉE</strong> ou <strong style="color:var(--red)">▼ SORTIE</strong> — la page s'ouvre et demande la quantité.</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+          <div class="search-bar"><span>🔍</span><input id="q-qr" placeholder="Filtrer…" oninput="renderQR()"></div>
+          <select id="filtre-qr-fam" onchange="renderQR()" style="padding:6px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:0.8rem;color:var(--text)"><option value="">Toutes familles</option></select>
+          <button class="btn btn-s1 btn-sm" id="btn-print-qr" onclick="printQR()">🖨️ Imprimer</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="qr-grid" id="qr-grid"></div>
 </div>
 
-<!-- PAGE HISTORIQUE -->
+<!-- PAGE HISTO -->
 <div class="page" id="page-histo">
   <div class="card">
     <div class="card-header">
-      <span class="card-title">Historique des mouvements</span>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <select id="filtre-histo-type" onchange="renderHisto()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.82rem">
-          <option value="">Tous types</option><option value="entree">Entrées</option><option value="sortie">Sorties</option>
+      <span class="card-title s1" id="histo-card-title">Historique</span>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+        <select id="filtre-histo-type" onchange="renderHisto()" style="padding:6px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:0.8rem">
+          <option value="">Tous</option><option value="entree">Entrées</option><option value="sortie">Sorties</option>
         </select>
-        <select id="filtre-histo-user" onchange="renderHisto()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.82rem">
-          <option value="">Tous utilisateurs</option>
-        </select>
-        <button class="btn btn-outline btn-sm" onclick="clearHisto()">🗑️ Vider</button>
+        <select id="filtre-histo-user" onchange="renderHisto()" style="padding:6px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:0.8rem"><option value="">Tous utilisateurs</option></select>
+        <button class="btn btn-outline btn-sm" onclick="clearHisto()">🗑️</button>
       </div>
     </div>
     <div class="card-body" id="histo-list"></div>
   </div>
 </div>
 
-<!-- PAGE RÉFÉRENCES -->
+<!-- PAGE REFS -->
 <div class="page" id="page-refs">
-  <div class="card" style="margin-bottom:20px">
-    <div class="card-header"><span class="card-title">➕ Ajouter une référence</span></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header"><span class="card-title s1" id="refs-card-title">➕ Ajouter une référence</span></div>
     <div class="card-body">
-      <div class="form-grid" style="margin-bottom:14px">
+      <div class="form-grid" style="margin-bottom:12px">
         <div class="form-group"><label>Famille / Couleur</label><input id="n-famille" placeholder="Ex : Réservoir tout rouge" list="dl-familles"><datalist id="dl-familles"></datalist></div>
         <div class="form-group"><label>Désignation</label><input id="n-desig" placeholder="Ex : FYKE 80 L - 300 Bar"></div>
         <div class="form-group"><label>Stock initial</label><input id="n-stock" type="number" value="0" min="0"></div>
         <div class="form-group"><label>Seuil d'alerte</label><input id="n-seuil" type="number" value="5" min="0"></div>
       </div>
       <div id="add-ref-msg" style="display:none"></div>
-      <button class="btn btn-primary" onclick="addRef()">➕ Ajouter</button>
+      <button class="btn btn-s1 btn-sm" id="btn-add-ref" onclick="addRef()">➕ Ajouter</button>
     </div>
   </div>
   <div class="card">
-    <div class="card-header"><span class="card-title">Gérer les références actives</span></div>
+    <div class="card-header"><span class="card-title s1" id="refs-list-title">Références actives</span></div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Famille</th><th>Désignation</th><th>Stock</th><th>Seuil</th><th>Actions</th></tr></thead>
       <tbody id="tbody-refs"></tbody>
@@ -437,14 +511,14 @@ tbody td{padding:11px 14px;font-size:0.88rem;vertical-align:middle;}
 
 <!-- PAGE ARCHIVES -->
 <div class="page" id="page-archives">
-  <div class="archive-banner">
-    <div style="font-size:1.4rem">🗄️</div>
-    <div style="font-size:0.87rem;color:var(--purple);font-weight:500">Les références archivées ne sont plus visibles dans le stock actif ni dans les QR codes. Vous pouvez les restaurer à tout moment.</div>
+  <div style="background:var(--purple-bg);border:1px solid #c4b5fd;border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:1.3rem">🗄️</span>
+    <span style="font-size:0.85rem;color:var(--purple);font-weight:500">Les références archivées ne sont plus visibles dans le stock actif. Restaurez-les à tout moment.</span>
   </div>
   <div class="card">
     <div class="card-header">
-      <span class="card-title">Références archivées</span>
-      <span id="archive-count" style="font-size:0.82rem;color:var(--text-muted)"></span>
+      <span class="card-title s1" id="arch-card-title">Références archivées</span>
+      <span id="archive-count" style="font-size:0.8rem;color:var(--text-muted)"></span>
     </div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Famille</th><th>Désignation</th><th style="text-align:center">Stock archivé</th><th>Date</th><th>Actions</th></tr></thead>
@@ -453,70 +527,7 @@ tbody td{padding:11px 14px;font-size:0.88rem;vertical-align:middle;}
   </div>
 </div>
 
-<!-- PAGE GRAPHIQUES -->
-<div class="page" id="page-graphs">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">📊 Stock par référence</span>
-        <select id="g-fam" onchange="renderGraphs()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.82rem;color:var(--text)"><option value="">Toutes familles</option></select>
-      </div>
-      <div class="card-body"><canvas id="chart-bar" height="260"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">🥧 Répartition par famille</span></div>
-      <div class="card-body" style="display:flex;align-items:center;justify-content:center"><canvas id="chart-pie" height="260" style="max-width:260px"></canvas></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">📈 Mouvements dans le temps</span>
-      <select id="g-days" onchange="renderGraphs()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.82rem;color:var(--text)">
-        <option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="90">90 jours</option>
-      </select>
-    </div>
-    <div class="card-body"><canvas id="chart-line" height="110"></canvas></div>
-  </div>
-</div>
-
-<!-- PAGE PARAMÈTRES -->
-<div class="page" id="page-params">
-  <div class="card" style="margin-bottom:20px">
-    <div class="card-header">
-      <span class="card-title">📧 Alertes email — Stock bas</span>
-    </div>
-    <div class="card-body">
-      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-        <input id="new-email" type="email" placeholder="prenom.nom@entreprise.com" style="flex:1;min-width:200px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem">
-        <button class="btn btn-green" onclick="addEmail()">➕ Ajouter</button>
-      </div>
-      <div id="emails-list" style="margin-bottom:14px"></div>
-      <div style="background:var(--amber-bg);border-radius:8px;padding:11px 15px;font-size:0.83rem;color:var(--amber)">⚠️ Les emails sont envoyés via EmailJS (gratuit jusqu'à 200/mois). Configurez votre clé ci-dessous.</div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">🔧 Configuration EmailJS</span>
-      <a href="https://www.emailjs.com" target="_blank" class="btn btn-outline btn-sm">📖 Créer un compte</a>
-    </div>
-    <div class="card-body">
-      <div class="form-grid" style="margin-bottom:14px">
-        <div class="form-group"><label>Service ID</label><input id="ejs-service" placeholder="service_xxxxxxx"></div>
-        <div class="form-group"><label>Template ID</label><input id="ejs-template" placeholder="template_xxxxxxx"></div>
-        <div class="form-group"><label>Public Key</label><input id="ejs-pubkey" placeholder="xxxxxxxxxxxxxxx"></div>
-        <div class="form-group" style="justify-content:flex-end;padding-top:20px">
-          <button class="btn btn-primary" onclick="saveEmailConfig()">💾 Sauvegarder</button>
-        </div>
-      </div>
-      <div id="ejs-status" style="display:none"></div>
-      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 15px;font-size:0.82rem;color:#1e40af;line-height:1.6">
-        <strong>Guide EmailJS :</strong> 1) Créez un compte emailjs.com · 2) Ajoutez un service email → notez le Service ID · 3) Créez un template avec <code>{{ref}}</code>, <code>{{stock}}</code>, <code>{{seuil}}</code>, <code>{{user}}</code> → notez le Template ID · 4) Account → API Keys → copiez la Public Key
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL MOUVEMENT -->
+<!-- MODAL MVT -->
 <div class="modal-backdrop" id="modal">
   <div class="modal-box">
     <div class="modal-title" id="m-title"></div>
@@ -535,13 +546,19 @@ tbody td{padding:11px 14px;font-size:0.88rem;vertical-align:middle;}
 
 <script>
 // ════ CONFIG ════
-const BIN_ID  = '6a0da8606877513b27a26f68';
-const API_KEY = '$2a$10$CsvDZUqgyyBnWfr7AOR/OOvFQwRLkf9DxipllxZXJnx2CWBDFjPSa';
-const BIN_URL = 'https://api.jsonbin.io/v3/b/'+BIN_ID;
-const ADMIN_CODE = '5238';
-const DEFAULT_PIN = '0000';
+const ADMIN_CODE='5238', DEFAULT_PIN='0000';
+const API_KEY='$2a$10$CsvDZUqgyyBnWfr7AOR/OOvFQwRLkf9DxipllxZXJnx2CWBDFjPSa';
+const SPACES = {
+  1: { name:'Reco Non Chargé', icon:'🔵', cls:'s1', binId:'6a0da8606877513b27a26f68' },
+  2: { name:'Kanban Reco',     icon:'🟠', cls:'s2', binId:'6a193b3bddf5aa59f7731dfc' },
+  3: { name:'Kanban Neuf',     icon:'🟢', cls:'s3', binId:'6a193acbddf5aa59f7731c9d' },
+};
+const SPACE_COLORS = {
+  1: { primary:'#0f3460', light:'#1e4d8c', bg:'#e8f0fb' },
+  2: { primary:'#92400e', light:'#b45309', bg:'#fff7ed' },
+  3: { primary:'#14532d', light:'#166534', bg:'#f0fdf4' },
+};
 
-// ════ DONNÉES PAR DÉFAUT ════
 const DEFAULTS=[
   {id:'FYKE80L300B', famille:'Réservoir tout rouge',        desig:'FYKE 80 L - 300 Bar',    stock:0,seuil:5},
   {id:'ROV140L300B', famille:'Réservoir rouge Ogive Verte', desig:'140 L - 300 Bar',         stock:0,seuil:5},
@@ -564,54 +581,80 @@ const DEFAULTS=[
 ];
 
 // ════ STATE ════
-let refs=[],histo=[],archives=[],modal={};
-let chartBar=null,chartPie=null,chartLine=null;
-let pinBuf='',adminPinBuf='';
+let curSpace=1, refs={1:[],2:[],3:[]}, histo={1:[],2:[],3:[]}, archives={1:[],2:[],3:[]};
+let modal={}, pinBuf='', adminPinBuf='', cpOldBuf='', cpNewBuf='', cpConfBuf='';
 
-// ════ JSONBIN ════
-async function loadFromCloud(){
-  setSyncStatus('syncing','Chargement…');
+// ════ CLOUD ════
+function binUrl(s){ return 'https://api.jsonbin.io/v3/b/'+SPACES[s].binId; }
+
+async function loadSpace(s){
   try{
-    const r=await fetch(BIN_URL+'/latest',{headers:{'X-Master-Key':API_KEY}});
+    const r=await fetch(binUrl(s)+'/latest',{headers:{'X-Master-Key':API_KEY}});
     if(!r.ok) throw new Error();
-    const d=await r.json();
-    const data=d.record;
-    if(data.refs&&data.refs.length>0){refs=data.refs;histo=data.histo||[];archives=data.archives||[];}
-    else{refs=JSON.parse(JSON.stringify(DEFAULTS));histo=[];archives=[];await saveToCloud();}
-    setSyncStatus('ok','Synchronisé · '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
+    const d=await r.json(), data=d.record;
+    if(data.refs&&data.refs.length>0){ refs[s]=data.refs; histo[s]=data.histo||[]; archives[s]=data.archives||[]; }
+    else{ refs[s]=JSON.parse(JSON.stringify(DEFAULTS)); histo[s]=[]; archives[s]=[]; await saveSpace(s); }
   }catch{
-    setSyncStatus('error','Mode hors ligne');
-    try{const l=localStorage.getItem('stock_v2');if(l){const d=JSON.parse(l);refs=d.refs||[];histo=d.histo||[];archives=d.archives||[];}else{refs=JSON.parse(JSON.stringify(DEFAULTS));histo=[];archives=[];}}catch{refs=JSON.parse(JSON.stringify(DEFAULTS));histo=[];archives=[];}
-    showToast('⚠️ Mode hors ligne','warning');
+    try{const l=localStorage.getItem('stock_s'+s);if(l){const d=JSON.parse(l);refs[s]=d.refs||[];histo[s]=d.histo||[];archives[s]=d.archives||[];}else{refs[s]=JSON.parse(JSON.stringify(DEFAULTS));histo[s]=[];archives[s]=[];}}
+    catch{refs[s]=JSON.parse(JSON.stringify(DEFAULTS));histo[s]=[];archives[s]=[];}
   }
-  document.getElementById('loading').style.display='none';
-  renderStock();checkURL();
 }
 
-async function saveToCloud(){
-  setSyncStatus('syncing','Sauvegarde…');
-  localStorage.setItem('stock_v2',JSON.stringify({refs,histo,archives}));
+async function saveSpace(s){
+  localStorage.setItem('stock_s'+s, JSON.stringify({refs:refs[s],histo:histo[s],archives:archives[s]}));
   try{
-    const r=await fetch(BIN_URL,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},body:JSON.stringify({refs,histo,archives})});
-    if(!r.ok) throw new Error();
-    setSyncStatus('ok','Synchronisé · '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
-  }catch{setSyncStatus('error','Erreur sync');showToast('⚠️ Sync cloud échouée','warning');}
+    await fetch(binUrl(s),{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},body:JSON.stringify({refs:refs[s],histo:histo[s],archives:archives[s]})});
+    setSyncStatus('ok');
+  }catch{ setSyncStatus('error'); }
 }
 
-function setSyncStatus(s,t){
+function setSyncStatus(s){
   const d=document.getElementById('sync-dot');
   d.className='sync-dot'+(s==='syncing'?' syncing':s==='error'?' error':'');
-  document.getElementById('sync-status').textContent=t;
+  document.getElementById('sync-status').textContent=s==='ok'?'Synchronisé · '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):s==='error'?'Erreur sync':'Chargement…';
 }
-function forcSync(){loadFromCloud().then(()=>{renderStock();showToast('🔄 Rechargé','info');});}
-setInterval(()=>loadFromCloud().then(()=>renderStock()),30000);
+async function forcSync(){ setSyncStatus('syncing'); await loadSpace(curSpace); renderStock(); showToast('🔄 Rechargé','info'); setSyncStatus('ok'); }
+setInterval(async()=>{ await loadSpace(curSpace); renderStock(); },30000);
 
-// ════ LOGIN SYSTÈME ════
+// ════ SPACE SWITCH ════
+function switchSpace(s){
+  curSpace=s;
+  const sp=SPACES[s], col=SPACE_COLORS[s];
+  // Update header
+  document.getElementById('main-header').className='header s'+s;
+  document.getElementById('header-logo').textContent=sp.icon;
+  document.getElementById('header-title').textContent=sp.name;
+  // Update tabs
+  [1,2,3].forEach(i=>{
+    const t=document.getElementById('tab-s'+i);
+    t.className='space-tab'+(i===s?' active-s'+i:'');
+  });
+  // Update nav active color
+  document.querySelectorAll('.nav-btn.active').forEach(b=>{ b.className='nav-btn active '+sp.cls; });
+  // Update card titles color
+  document.querySelectorAll('.card-title').forEach(el=>{ el.className='card-title '+sp.cls; });
+  document.querySelectorAll('.stat-val').forEach(el=>{ el.className='stat-val '+sp.cls; });
+  // Update print button
+  document.getElementById('btn-print-qr').className='btn btn-s'+s+' btn-sm';
+  document.getElementById('btn-add-ref').className='btn btn-s'+s+' btn-sm';
+  renderStock();
+  // Keep current page active
+  const activePage = document.querySelector('.page.active');
+  if(activePage){
+    const pg = activePage.id.replace('page-','');
+    if(pg==='qrcodes') renderQR();
+    if(pg==='histo') renderHisto();
+    if(pg==='refs') renderRefs();
+    if(pg==='archives') renderArchives();
+  }
+  setSyncStatus('ok');
+}
+
+// ════ LOGIN ════
 function getUsers(){try{return JSON.parse(localStorage.getItem('stock_users_v2')||'[]');}catch{return[];}}
 function saveUsers(list){localStorage.setItem('stock_users_v2',JSON.stringify(list));}
 
 function initLogin(){
-  // Créer la liste par défaut si vide
   if(!getUsers().length){
     saveUsers([
       {name:'David',    pin:'5238'},
@@ -635,47 +678,30 @@ function initLogin(){
     ]);
   }
   populateLoginSelect();
-  // Auto-login si session active
   const session=localStorage.getItem('stock_session');
-  if(session){
-    document.getElementById('login-page').style.display='none';
-    document.getElementById('header-user').textContent='👤 '+session;
-  }
+  if(session){ document.getElementById('login-page').style.display='none'; document.getElementById('header-user').textContent='👤 '+session; }
 }
 
 function populateLoginSelect(){
-  const users=getUsers();
-  const sel=document.getElementById('login-select');
-  sel.innerHTML='<option value="">-- Sélectionnez votre nom --</option>'+
-    users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  const users=getUsers(), sel=document.getElementById('login-select');
+  sel.innerHTML='<option value="">-- Sélectionnez votre nom --</option>'+users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
 }
 
-function resetPin(){
-  pinBuf='';
-  updateDots('dot-',pinBuf,false);
-  document.getElementById('login-error').textContent='';
-}
+function resetPin(){ pinBuf=''; updateDots('dot-',pinBuf,false); document.getElementById('login-error').textContent=''; }
 
 function pinPress(d){
   if(pinBuf.length>=4) return;
   const name=document.getElementById('login-select').value;
-  if(!name){document.getElementById('login-error').textContent="Sélectionnez votre nom d'abord.";return;}
-  pinBuf+=d;
-  updateDots('dot-',pinBuf,false);
+  if(!name){ document.getElementById('login-error').textContent='Sélectionnez votre nom.'; return; }
+  pinBuf+=d; updateDots('dot-',pinBuf,false);
   if(pinBuf.length===4) setTimeout(()=>checkPin(name,pinBuf),150);
 }
-
-function pinDel(){
-  pinBuf=pinBuf.slice(0,-1);
-  updateDots('dot-',pinBuf,false);
-  document.getElementById('login-error').textContent='';
-}
+function pinDel(){ pinBuf=pinBuf.slice(0,-1); updateDots('dot-',pinBuf,false); document.getElementById('login-error').textContent=''; }
 
 function checkPin(name,pin){
-  const users=getUsers();
-  const user=users.find(u=>u.name===name);
-  if(!user){resetPin();return;}
-  if(pin===(user.pin||DEFAULT_PIN)){
+  const users=getUsers(), u=users.find(x=>x.name===name);
+  if(!u){resetPin();return;}
+  if(pin===(u.pin||DEFAULT_PIN)){
     localStorage.setItem('stock_session',name);
     document.getElementById('login-page').style.display='none';
     document.getElementById('header-user').textContent='👤 '+name;
@@ -690,81 +716,33 @@ function checkPin(name,pin){
 
 function updateDots(prefix,buf,isError){
   for(let i=0;i<4;i++){
-    const el=document.getElementById(prefix+i);
-    if(!el) return;
-    if(isError) el.className='pin-dot error';
-    else el.className='pin-dot'+(i<buf.length?' filled':'');
+    const el=document.getElementById(prefix+i); if(!el) return;
+    el.className='pin-dot'+(isError?' error':i<buf.length?' filled':'');
   }
 }
-
-function logout(){
-  if(!confirm('Se déconnecter ?')) return;
-  localStorage.removeItem('stock_session');
-  pinBuf='';
-  populateLoginSelect();
-  updateDots('dot-','',false);
-  document.getElementById('login-error').textContent='';
-  document.getElementById('login-page').style.display='flex';
-}
+function logout(){ if(!confirm('Se déconnecter ?'))return; localStorage.removeItem('stock_session'); pinBuf=''; populateLoginSelect(); updateDots('dot-','',false); document.getElementById('login-error').textContent=''; document.getElementById('login-page').style.display='flex'; }
 
 // ════ ADMIN ════
-function showAdminLogin(){
-  adminPinBuf='';
-  updateDots('adot-','',false);
-  document.getElementById('admin-login-err').textContent='';
-  document.getElementById('amodal-login').classList.add('open');
-}
-function closeAdminLogin(){
-  document.getElementById('amodal-login').classList.remove('open');
-  adminPinBuf='';
-}
-
-function adminPinPress(d){
-  if(adminPinBuf.length>=4) return;
-  adminPinBuf+=d;
-  updateDots('adot-',adminPinBuf,false);
-  if(adminPinBuf.length===4) setTimeout(()=>checkAdminPin(adminPinBuf),150);
-}
-function adminPinDel(){
-  adminPinBuf=adminPinBuf.slice(0,-1);
-  updateDots('adot-',adminPinBuf,false);
-}
-
+function showAdminLogin(){ adminPinBuf=''; updateDots('adot-','',false); document.getElementById('admin-login-err').textContent=''; document.getElementById('amodal-login').classList.add('open'); }
+function closeAdminLogin(){ document.getElementById('amodal-login').classList.remove('open'); adminPinBuf=''; }
+function adminPinPress(d){ if(adminPinBuf.length>=4)return; adminPinBuf+=d; updateDots('adot-',adminPinBuf,false); if(adminPinBuf.length===4) setTimeout(()=>checkAdminPin(adminPinBuf),150); }
+function adminPinDel(){ adminPinBuf=adminPinBuf.slice(0,-1); updateDots('adot-',adminPinBuf,false); }
 function checkAdminPin(pin){
-  if(pin===ADMIN_CODE){
-    document.getElementById('amodal-login').classList.remove('open');
-    adminPinBuf='';
-    openAdminPanel();
-  }else{
-    for(let i=0;i<4;i++) document.getElementById('adot-'+i).className='pin-dot error';
-    document.getElementById('admin-login-err').textContent='Code incorrect.';
-    setTimeout(()=>{adminPinBuf='';updateDots('adot-','',false);document.getElementById('admin-login-err').textContent='';},900);
-  }
+  if(pin===ADMIN_CODE){ document.getElementById('amodal-login').classList.remove('open'); adminPinBuf=''; openAdminPanel(); }
+  else{ for(let i=0;i<4;i++) document.getElementById('adot-'+i).className='pin-dot error'; document.getElementById('admin-login-err').textContent='Code incorrect.'; setTimeout(()=>{adminPinBuf='';updateDots('adot-','',false);document.getElementById('admin-login-err').textContent='';},900); }
 }
-
-function openAdminPanel(){
-  renderAdminUsers();
-  document.getElementById('amodal-panel').classList.add('open');
-}
-function closeAdminPanel(){
-  document.getElementById('amodal-panel').classList.remove('open');
-  populateLoginSelect();
-}
+function openAdminPanel(){ renderAdminUsers(); document.getElementById('amodal-panel').classList.add('open'); }
+function closeAdminPanel(){ document.getElementById('amodal-panel').classList.remove('open'); populateLoginSelect(); }
 
 function renderAdminUsers(){
-  const users=getUsers();
-  const el=document.getElementById('admin-users-list');
-  if(!users.length){el.innerHTML='<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:0.87rem">Aucun utilisateur</div>';return;}
-  el.innerHTML=users.map((u,i)=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
-      <span style="font-weight:700;font-size:0.9rem">👤 ${u.name}</span>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="password" value="${u.pin||DEFAULT_PIN}" maxlength="4" placeholder="PIN"
-          style="width:90px;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:0.9rem;text-align:center;letter-spacing:4px"
-          onchange="changeUserPin(${i},this.value)">
-        <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="adminRemoveUser(${i})">🗑️</button>
-      </div>
-    </div>`).join('');
+  const users=getUsers(), el=document.getElementById('admin-users-list');
+  if(!users.length){el.innerHTML='<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:0.85rem">Aucun utilisateur</div>';return;}
+  el.innerHTML=users.map((u,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:7px">
+    <span style="font-weight:700;font-size:0.88rem">👤 ${u.name}</span>
+    <div style="display:flex;gap:7px;align-items:center">
+      <input type="password" value="${u.pin||DEFAULT_PIN}" maxlength="4" style="width:85px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:0.88rem;text-align:center;letter-spacing:4px" onchange="changeUserPin(${i},this.value)">
+      <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="adminRemoveUser(${i})">🗑️</button>
+    </div></div>`).join('');
 }
 
 function adminAddUser(){
@@ -772,32 +750,64 @@ function adminAddUser(){
   const pin=document.getElementById('new-user-pin').value.trim()||DEFAULT_PIN;
   const err=document.getElementById('admin-add-err');
   if(!name){err.textContent='Nom obligatoire.';err.style.display='block';return;}
-  if(pin.length!==4||isNaN(pin)){err.textContent='Le PIN doit être 4 chiffres.';err.style.display='block';return;}
+  if(pin.length!==4||isNaN(pin)){err.textContent='PIN = 4 chiffres.';err.style.display='block';return;}
   const users=getUsers();
-  if(users.find(u=>u.name===name)){err.textContent='Cet utilisateur existe déjà.';err.style.display='block';return;}
-  users.push({name,pin});
-  saveUsers(users);
-  document.getElementById('new-user-name').value='';
-  document.getElementById('new-user-pin').value='';
-  err.style.display='none';
-  renderAdminUsers();
-  showToast('👤 "'+name+'" ajouté','info');
+  if(users.find(u=>u.name===name)){err.textContent='Utilisateur déjà existant.';err.style.display='block';return;}
+  users.push({name,pin}); saveUsers(users);
+  document.getElementById('new-user-name').value=''; document.getElementById('new-user-pin').value='';
+  err.style.display='none'; renderAdminUsers(); showToast('👤 "'+name+'" ajouté','info');
+}
+function changeUserPin(i,pin){ if(pin.length!==4||isNaN(pin)){showToast('PIN invalide','warning');return;} const users=getUsers(); users[i].pin=pin; saveUsers(users); showToast('🔑 PIN modifié','info'); }
+function adminRemoveUser(i){ const users=getUsers(); if(!confirm('Supprimer "'+users[i].name+'" ?'))return; users.splice(i,1); saveUsers(users); renderAdminUsers(); }
+
+function exportUsers(){
+  const users=getUsers(); if(!users.length){showToast('Aucun utilisateur','warning');return;}
+  const a=document.createElement('a'); a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify({users,exportDate:new Date().toISOString()},null,2)); a.download='utilisateurs_'+new Date().toISOString().slice(0,10)+'.json'; a.click(); showToast('📤 Liste exportée','info');
+}
+function importUsers(input){
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader(); reader.onload=e=>{
+    try{ const data=JSON.parse(e.target.result); if(!data.users||!Array.isArray(data.users)) throw new Error();
+      const existing=getUsers(); let added=0;
+      data.users.forEach(u=>{if(!existing.find(e=>e.name===u.name)){existing.push(u);added++;}});
+      saveUsers(existing); renderAdminUsers(); populateLoginSelect(); showToast('✅ '+added+' utilisateur(s) importé(s)','info');
+    }catch{ showToast('Fichier invalide','warning'); }
+  }; reader.readAsText(file); input.value='';
 }
 
-function changeUserPin(i,pin){
-  if(pin.length!==4||isNaN(pin)){showToast('PIN invalide — 4 chiffres requis','warning');return;}
-  const users=getUsers();
-  users[i].pin=pin;
-  saveUsers(users);
-  showToast('🔑 PIN de "'+users[i].name+'" modifié','info');
+// ════ CHANGE PIN ════
+function showChangePinModal(){
+  const user=localStorage.getItem('stock_session'); if(!user){showToast('Connectez-vous dabord','warning');return;}
+  cpOldBuf='';cpNewBuf='';cpConfBuf='';
+  document.getElementById('change-pin-user').textContent='Utilisateur : '+user;
+  document.getElementById('cp-step1').style.display='block'; document.getElementById('cp-step2').style.display='none';
+  updateDots('cpold-','',false); updateDots('cpnew-','',false); updateDots('cpconf-','',false);
+  document.getElementById('cp-err-old').textContent=''; document.getElementById('cp-err-new').textContent='';
+  document.getElementById('amodal-change-pin').classList.add('open');
 }
-
-function adminRemoveUser(i){
-  const users=getUsers();
-  if(!confirm('Supprimer "'+users[i].name+'" ?')) return;
-  users.splice(i,1);
-  saveUsers(users);
-  renderAdminUsers();
+function cpPress(step,d){
+  if(step==='old'){
+    if(cpOldBuf.length>=4)return; cpOldBuf+=d; updateDots('cpold-',cpOldBuf,false);
+    if(cpOldBuf.length===4) setTimeout(()=>checkOldPin(),150);
+  }else{
+    if(cpNewBuf.length<4){ cpNewBuf+=d; updateDots('cpnew-',cpNewBuf,false); }
+    else if(cpConfBuf.length<4){ cpConfBuf+=d; updateDots('cpconf-',cpConfBuf,false); if(cpConfBuf.length===4) setTimeout(()=>checkNewPin(),150); }
+  }
+}
+function cpDel(step){
+  if(step==='old'){ cpOldBuf=cpOldBuf.slice(0,-1); updateDots('cpold-',cpOldBuf,false); document.getElementById('cp-err-old').textContent=''; }
+  else{ if(cpConfBuf.length>0){cpConfBuf=cpConfBuf.slice(0,-1);updateDots('cpconf-',cpConfBuf,false);}else if(cpNewBuf.length>0){cpNewBuf=cpNewBuf.slice(0,-1);updateDots('cpnew-',cpNewBuf,false);} document.getElementById('cp-err-new').textContent=''; }
+}
+function checkOldPin(){
+  const user=localStorage.getItem('stock_session'), users=getUsers(), u=users.find(x=>x.name===user);
+  if(!u){document.getElementById('amodal-change-pin').classList.remove('open');return;}
+  if(cpOldBuf===(u.pin||DEFAULT_PIN)){ document.getElementById('cp-step1').style.display='none'; document.getElementById('cp-step2').style.display='block'; cpOldBuf=''; }
+  else{ for(let i=0;i<4;i++) document.getElementById('cpold-'+i).className='pin-dot error'; document.getElementById('cp-err-old').textContent='Ancien PIN incorrect.'; setTimeout(()=>{cpOldBuf='';updateDots('cpold-','',false);document.getElementById('cp-err-old').textContent='';},900); }
+}
+function checkNewPin(){
+  if(cpNewBuf!==cpConfBuf){ for(let i=0;i<4;i++) document.getElementById('cpconf-'+i).className='pin-dot error'; document.getElementById('cp-err-new').textContent='PIN non identiques.'; setTimeout(()=>{cpConfBuf='';updateDots('cpconf-','',false);document.getElementById('cp-err-new').textContent='';},900); return; }
+  const user=localStorage.getItem('stock_session'), users=getUsers(), idx=users.findIndex(x=>x.name===user);
+  if(idx>=0){ users[idx].pin=cpNewBuf; saveUsers(users); document.getElementById('amodal-change-pin').classList.remove('open'); showToast('🔑 PIN modifié !','info'); }
 }
 
 // ════ NAVIGATION ════
@@ -807,506 +817,228 @@ function goTo(btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+pg).classList.add('active');
   btn.classList.add('active');
+  btn.className='nav-btn active '+SPACES[curSpace].cls;
   if(pg==='stock') renderStock();
   if(pg==='qrcodes') renderQR();
   if(pg==='histo') renderHisto();
   if(pg==='refs') renderRefs();
   if(pg==='archives') renderArchives();
-  if(pg==='graphs') renderGraphs();
-  if(pg==='params') renderParams();
 }
 
 // ════ STOCK ════
 function renderStock(){
-  const q=document.getElementById('q-stock').value.toLowerCase();
-  const fam=document.getElementById('filtre-stock').value;
-  const fams=[...new Set(refs.map(r=>r.famille))];
-  const sel=document.getElementById('filtre-stock');
-  const cur=sel.value;
+  const s=curSpace, q=document.getElementById('q-stock').value.toLowerCase(), fam=document.getElementById('filtre-stock').value;
+  const fams=[...new Set((refs[s]||[]).map(r=>r.famille))];
+  const sel=document.getElementById('filtre-stock'), cur=sel.value;
   sel.innerHTML='<option value="">Toutes familles</option>'+fams.map(f=>`<option value="${f}" ${f===cur?'selected':''}>${f}</option>`).join('');
-  const filtered=refs.filter(r=>(!q||r.desig.toLowerCase().includes(q)||r.famille.toLowerCase().includes(q))&&(!fam||r.famille===fam));
+  const filtered=(refs[s]||[]).filter(r=>(!q||r.desig.toLowerCase().includes(q)||r.famille.toLowerCase().includes(q))&&(!fam||r.famille===fam));
+  const sc=SPACES[s].cls;
   let lastFam=null;
   document.getElementById('tbody-stock').innerHTML=filtered.map(r=>{
     let sep='';
-    if(r.famille!==lastFam){lastFam=r.famille;sep=`<tr class="family-sep"><td colspan="5">${r.famille}</td></tr>`;}
+    if(r.famille!==lastFam){lastFam=r.famille;sep=`<tr class="family-sep ${sc}"><td colspan="5">${r.famille}</td></tr>`;}
     const b=r.stock===0?'<span class="badge badge-zero">🚫 Rupture</span>':r.stock<=r.seuil?'<span class="badge badge-low">⚠️ Stock bas</span>':'<span class="badge badge-ok">✅ OK</span>';
-    return sep+`<tr><td style="color:var(--text-muted);font-size:0.8rem">${r.famille}</td><td style="font-weight:600">${r.desig}</td><td style="text-align:center;font-size:1.05rem;font-weight:800;color:var(--primary)">${r.stock}</td><td>${b}</td><td style="display:flex;gap:5px"><button class="btn btn-green btn-sm" onclick="openModal('${r.id}','entree')">▲ Entrée</button><button class="btn btn-red btn-sm" onclick="openModal('${r.id}','sortie')">▼ Sortie</button></td></tr>`;
+    return sep+`<tr><td style="color:var(--text-muted);font-size:0.78rem">${r.famille}</td><td style="font-weight:600">${r.desig}</td><td style="text-align:center;font-size:1rem;font-weight:800">${r.stock}</td><td>${b}</td><td style="display:flex;gap:5px"><button class="btn btn-green btn-sm" onclick="openModal('${r.id}','entree')">▲</button><button class="btn btn-red btn-sm" onclick="openModal('${r.id}','sortie')">▼</button></td></tr>`;
   }).join('');
-  document.getElementById('s-total').textContent=refs.length;
-  document.getElementById('s-units').textContent=refs.reduce((a,r)=>a+r.stock,0);
-  document.getElementById('s-low').textContent=refs.filter(r=>r.stock>0&&r.stock<=r.seuil).length;
-  const zero=refs.filter(r=>r.stock===0).length;
+  const rr=refs[s]||[];
+  document.getElementById('s-total').textContent=rr.length;
+  document.getElementById('s-units').textContent=rr.reduce((a,r)=>a+r.stock,0);
+  document.getElementById('s-low').textContent=rr.filter(r=>r.stock>0&&r.stock<=r.seuil).length;
+  const zero=rr.filter(r=>r.stock===0).length;
   document.getElementById('s-zero').textContent=zero;
-  document.getElementById('s-arch').textContent=archives.length;
-  const nb=document.getElementById('nb-rupture');nb.textContent=zero;nb.style.display=zero?'inline':'none';
-  const na=document.getElementById('nb-archives');na.textContent=archives.length;na.style.display=archives.length?'inline':'none';
+  document.getElementById('s-arch').textContent=(archives[s]||[]).length;
+  const nb=document.getElementById('nb-rupture'); nb.textContent=zero; nb.style.display=zero?'inline':'none';
 }
 
-// ════ QR CODES ════
+// ════ QR ════
 function renderQR(){
-  const q=document.getElementById('q-qr').value.toLowerCase();
-  const fam=document.getElementById('filtre-qr-fam').value;
-  const fams=[...new Set(refs.map(r=>r.famille))];
-  const sel=document.getElementById('filtre-qr-fam');
-  const cur=sel.value;
+  const s=curSpace, q=document.getElementById('q-qr').value.toLowerCase(), fam=document.getElementById('filtre-qr-fam').value;
+  const fams=[...new Set((refs[s]||[]).map(r=>r.famille))];
+  const sel=document.getElementById('filtre-qr-fam'), cur=sel.value;
   sel.innerHTML='<option value="">Toutes familles</option>'+fams.map(f=>`<option value="${f}" ${f===cur?'selected':''}>${f}</option>`).join('');
-  const filtered=refs.filter(r=>(!q||r.desig.toLowerCase().includes(q)||r.famille.toLowerCase().includes(q))&&(!fam||r.famille===fam));
-  const base=window.location.href.split('?')[0];
-  const grid=document.getElementById('qr-grid');
-  grid.innerHTML='';
-  if(!filtered.length){grid.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div>Aucune référence trouvée</div></div>';return;}
+  const filtered=(refs[s]||[]).filter(r=>(!q||r.desig.toLowerCase().includes(q)||r.famille.toLowerCase().includes(q))&&(!fam||r.famille===fam));
+  const base=window.location.href.split('?')[0], sc=SPACES[s].cls;
+  const grid=document.getElementById('qr-grid'); grid.innerHTML='';
+  if(!filtered.length){grid.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div>Aucune référence</div></div>';return;}
   let lastFam=null;
   filtered.forEach(r=>{
-    if(r.famille!==lastFam){
-      lastFam=r.famille;
-      const sep=document.createElement('div');
-      sep.className='print-family-header';sep.style.gridColumn='1/-1';sep.textContent='📁 '+r.famille;
-      grid.appendChild(sep);
-    }
-    const card=document.createElement('div');card.className='qr-card';
-    card.innerHTML=`<div class="qr-card-header"><div class="qr-card-desig">${r.desig}</div><div class="qr-card-famille">${r.famille}</div></div>
+    if(r.famille!==lastFam){ lastFam=r.famille; const sep=document.createElement('div'); sep.className='print-fam-hdr '+sc; sep.style.gridColumn='1/-1'; sep.textContent='📁 '+r.famille; grid.appendChild(sep); }
+    const card=document.createElement('div'); card.className='qr-card';
+    card.innerHTML=`<div class="qr-card-hdr ${sc}"><div class="qr-card-desig">${r.desig}</div><div class="qr-card-fam">${r.famille}</div></div>
       <div class="qr-pair">
-        <div class="qr-half"><div class="qr-type-label qr-type-entree">▲ ENTRÉE</div><div class="qr-canvas-wrap" id="qe-${r.id}"></div><div class="qr-hint">Scanner = entrée stock</div></div>
-        <div class="qr-half"><div class="qr-type-label qr-type-sortie">▼ SORTIE</div><div class="qr-canvas-wrap" id="qs-${r.id}"></div><div class="qr-hint">Scanner = sortie stock</div></div>
+        <div class="qr-half"><div class="qr-type-label qr-type-e">▲ ENTRÉE</div><div class="qr-canvas-wrap" id="qe-${r.id}"></div><div class="qr-hint">Scanner = entrée</div></div>
+        <div class="qr-half"><div class="qr-type-label qr-type-s">▼ SORTIE</div><div class="qr-canvas-wrap" id="qs-${r.id}"></div><div class="qr-hint">Scanner = sortie</div></div>
       </div>
-      <div class="qr-stock-info">Stock : <strong>${r.stock}</strong> unité(s) · Seuil : ${r.seuil}</div>`;
+      <div class="qr-stock">Stock : <strong>${r.stock}</strong> · Seuil : ${r.seuil}</div>`;
     grid.appendChild(card);
-    new QRCode(document.getElementById('qe-'+r.id),{text:base+'?ref='+encodeURIComponent(r.id)+'&action=entree',width:110,height:110,colorDark:'#16a34a',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
-    new QRCode(document.getElementById('qs-'+r.id),{text:base+'?ref='+encodeURIComponent(r.id)+'&action=sortie',width:110,height:110,colorDark:'#dc2626',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    const urlE=base+'?space='+s+'&ref='+encodeURIComponent(r.id)+'&action=entree';
+    const urlS=base+'?space='+s+'&ref='+encodeURIComponent(r.id)+'&action=sortie';
+    new QRCode(document.getElementById('qe-'+r.id),{text:urlE,width:110,height:110,colorDark:'#16a34a',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
+    new QRCode(document.getElementById('qs-'+r.id),{text:urlS,width:110,height:110,colorDark:'#dc2626',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
   });
 }
-function printQR(){if(document.getElementById('qr-grid').children.length===0)renderQR();setTimeout(()=>window.print(),500);}
+function printQR(){ if(document.getElementById('qr-grid').children.length===0)renderQR(); setTimeout(()=>window.print(),500); }
 
-// ════ MODAL MOUVEMENT ════
+// ════ MODAL ════
 function openModal(id,action){
-  const r=refs.find(x=>x.id===id);if(!r)return;
-  modal={id,action};
+  const s=curSpace, r=(refs[s]||[]).find(x=>x.id===id); if(!r)return;
+  modal={id,action,space:s};
   document.getElementById('m-title').textContent=action==='entree'?'▲ Entrée en stock':'▼ Sortie de stock';
-  document.getElementById('m-sub').textContent=r.desig+' · '+r.famille;
-  const banner=document.getElementById('m-banner');banner.className='modal-banner '+action;
-  banner.textContent=action==='entree'?'➕ Combien d\'unités entrent ?':'➖ Combien d\'unités sortent ?';
-  document.getElementById('m-info').textContent='Stock actuel : '+r.stock+' unité(s) · Seuil : '+r.seuil;
-  document.getElementById('m-qty').value=1;
-  document.getElementById('m-err').style.display='none';
+  document.getElementById('m-sub').textContent=r.desig+' · '+r.famille+' · '+SPACES[s].name;
+  const banner=document.getElementById('m-banner'); banner.className='modal-banner '+action;
+  banner.textContent=action==='entree'?'Combien entrent en stock ?':'Combien sortent du stock ?';
+  document.getElementById('m-info').textContent='Stock actuel : '+r.stock+' · Seuil : '+r.seuil;
+  document.getElementById('m-qty').value=1; document.getElementById('m-err').style.display='none';
   const btn=document.getElementById('m-confirm');
-  btn.textContent=action==='entree'?'▲ Confirmer l\'entrée':'▼ Confirmer la sortie';
+  btn.textContent=action==='entree'?'▲ Confirmer':'▼ Confirmer';
   btn.className='btn '+(action==='entree'?'btn-green':'btn-red');
   document.getElementById('modal').classList.add('open');
   setTimeout(()=>document.getElementById('m-qty').focus(),80);
 }
-function closeModal(){document.getElementById('modal').classList.remove('open');modal={};}
+function closeModal(){ document.getElementById('modal').classList.remove('open'); modal={}; }
 
 async function confirmMvt(){
   const qty=parseInt(document.getElementById('m-qty').value)||0;
   const err=document.getElementById('m-err');
   if(qty<=0){err.textContent='Quantité invalide.';err.style.display='block';return;}
-  const r=refs.find(x=>x.id===modal.id);
-  if(modal.action==='sortie'&&qty>r.stock){err.textContent='Stock insuffisant ('+r.stock+' disponible(s)).';err.style.display='block';return;}
+  const s=modal.space, r=(refs[s]||[]).find(x=>x.id===modal.id);
+  if(modal.action==='sortie'&&qty>r.stock){err.textContent='Stock insuffisant ('+r.stock+').';err.style.display='block';return;}
   const avant=r.stock;
   if(modal.action==='entree') r.stock+=qty; else r.stock-=qty;
   const user=localStorage.getItem('stock_session')||'Inconnu';
-  histo.unshift({date:new Date().toISOString(),id:r.id,desig:r.desig,famille:r.famille,action:modal.action,qty,avant,apres:r.stock,user});
-  if(modal.action==='sortie'&&r.stock<=r.seuil) sendAlertEmail(r.desig+' ('+r.famille+')',r.stock,r.seuil,user);
-  const action=modal.action;closeModal();renderStock();
+  histo[s].unshift({date:new Date().toISOString(),id:r.id,desig:r.desig,famille:r.famille,action:modal.action,qty,avant,apres:r.stock,user});
+  const action=modal.action; closeModal(); renderStock();
   showToast((action==='entree'?'▲ +':'▼ -')+qty+' — '+r.desig,action);
-  await saveToCloud();
+  await saveSpace(s);
 }
 
-// ════ HISTORIQUE ════
+// ════ HISTO ════
 function renderHisto(){
-  const type=document.getElementById('filtre-histo-type').value;
-  const userFil=document.getElementById('filtre-histo-user').value;
-  const users=[...new Set(histo.filter(h=>h.user).map(h=>h.user))];
-  const usel=document.getElementById('filtre-histo-user');
-  const ucur=usel.value;
+  const s=curSpace, type=document.getElementById('filtre-histo-type').value, userFil=document.getElementById('filtre-histo-user').value;
+  const users=[...new Set((histo[s]||[]).filter(h=>h.user).map(h=>h.user))];
+  const usel=document.getElementById('filtre-histo-user'), ucur=usel.value;
   usel.innerHTML='<option value="">Tous utilisateurs</option>'+users.map(u=>`<option value="${u}" ${u===ucur?'selected':''}>${u}</option>`).join('');
-  const list=histo.filter(h=>(!type||h.action===type)&&(!userFil||h.user===userFil));
+  const list=(histo[s]||[]).filter(h=>(!type||h.action===type)&&(!userFil||h.user===userFil));
   const el=document.getElementById('histo-list');
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div>Aucun mouvement</div></div>';return;}
   el.innerHTML=list.map(h=>{
-    const d=new Date(h.date);
-    const ds=d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-    const userBadge=h.user?`<span style="background:var(--purple-bg);color:var(--purple);border-radius:20px;padding:2px 8px;font-size:0.7rem;font-weight:700;margin-left:6px">${h.user}</span>`:'';
-    return `<div class="histo-item"><div class="histo-dot ${h.action}">${h.action==='entree'?'▲':'▼'}</div><div class="histo-body"><div class="histo-ref">${h.desig}${userBadge}</div><div class="histo-meta">${h.famille} · Avant:${h.avant} → Après:${h.apres}</div></div><div class="histo-qty ${h.action}">${h.action==='entree'?'+':'-'}${h.qty}</div><div class="histo-date">${ds}</div></div>`;
+    const d=new Date(h.date), ds=d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    const ub=h.user?`<span style="background:var(--purple-bg);color:var(--purple);border-radius:20px;padding:1px 7px;font-size:0.68rem;font-weight:700;margin-left:5px">${h.user}</span>`:'';
+    return `<div class="histo-item"><div class="histo-dot ${h.action}">${h.action==='entree'?'▲':'▼'}</div><div class="histo-body"><div class="histo-ref">${h.desig}${ub}</div><div class="histo-meta">${h.famille} · Avant:${h.avant} → Après:${h.apres}</div></div><div class="histo-qty ${h.action}">${h.action==='entree'?'+':'-'}${h.qty}</div><div class="histo-date">${ds}</div></div>`;
   }).join('');
 }
-async function clearHisto(){if(!confirm('Vider tout l\'historique ?'))return;histo=[];await saveToCloud();renderHisto();}
+async function clearHisto(){ if(!confirm('Vider tout historique ?'))return; histo[curSpace]=[]; await saveSpace(curSpace); renderHisto(); }
 
-// ════ RÉFÉRENCES ════
+// ════ REFS ════
 function renderRefs(){
-  const fams=[...new Set(refs.map(r=>r.famille))];
+  const s=curSpace, fams=[...new Set((refs[s]||[]).map(r=>r.famille))];
   document.getElementById('dl-familles').innerHTML=fams.map(f=>`<option value="${f}">`).join('');
-  document.getElementById('tbody-refs').innerHTML=refs.map((r,i)=>`<tr>
-    <td style="color:var(--text-muted);font-size:0.8rem">${r.famille}</td>
+  document.getElementById('tbody-refs').innerHTML=(refs[s]||[]).map((r,i)=>`<tr>
+    <td style="color:var(--text-muted);font-size:0.78rem">${r.famille}</td>
     <td style="font-weight:600">${r.desig}</td>
-    <td><input type="number" value="${r.stock}" min="0" style="width:68px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:0.87rem" onchange="updRef(${i},'stock',this.value)"></td>
-    <td><input type="number" value="${r.seuil}" min="0" style="width:68px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:0.87rem" onchange="updRef(${i},'seuil',this.value)"></td>
-    <td style="display:flex;gap:5px">
+    <td><input type="number" value="${r.stock}" min="0" style="width:65px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.85rem" onchange="updRef(${i},this.value,'stock')"></td>
+    <td><input type="number" value="${r.seuil}" min="0" style="width:65px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.85rem" onchange="updRef(${i},this.value,'seuil')"></td>
+    <td style="display:flex;gap:4px">
       <button class="btn btn-outline btn-sm" style="color:var(--amber);border-color:var(--amber)" onclick="archiveRef(${i})">🗄️</button>
       <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="delRef(${i})">🗑️</button>
-    </td>
-  </tr>`).join('');
+    </td></tr>`).join('');
 }
-async function updRef(i,field,val){refs[i][field]=parseInt(val)||0;await saveToCloud();}
+async function updRef(i,val,field){ const s=curSpace; refs[s][i][field]=parseInt(val)||0; await saveSpace(s); }
 async function addRef(){
-  const famille=document.getElementById('n-famille').value.trim();
-  const desig=document.getElementById('n-desig').value.trim();
-  const stock=parseInt(document.getElementById('n-stock').value)||0;
-  const seuil=parseInt(document.getElementById('n-seuil').value)||5;
+  const s=curSpace, famille=document.getElementById('n-famille').value.trim(), desig=document.getElementById('n-desig').value.trim();
+  const stock=parseInt(document.getElementById('n-stock').value)||0, seuil=parseInt(document.getElementById('n-seuil').value)||5;
   const msg=document.getElementById('add-ref-msg');
   if(!famille||!desig){msg.innerHTML='<div class="alert alert-err">Famille et désignation obligatoires.</div>';msg.style.display='block';return;}
-  const id='REF'+Date.now();
-  refs.push({id,famille,desig,stock,seuil});
-  if(stock>0) histo.unshift({date:new Date().toISOString(),id,desig,famille,action:'entree',qty:stock,avant:0,apres:stock,user:localStorage.getItem('stock_session')||'Inconnu'});
-  await saveToCloud();
+  const id='REF'+Date.now(); refs[s].push({id,famille,desig,stock,seuil});
+  if(stock>0) histo[s].unshift({date:new Date().toISOString(),id,desig,famille,action:'entree',qty:stock,avant:0,apres:stock,user:localStorage.getItem('stock_session')||'Inconnu'});
+  await saveSpace(s);
   ['n-famille','n-desig'].forEach(x=>document.getElementById(x).value='');
-  document.getElementById('n-stock').value=0;document.getElementById('n-seuil').value=5;
-  msg.innerHTML='<div class="alert alert-ok">✅ "'+desig+'" ajoutée.</div>';msg.style.display='block';
-  setTimeout(()=>msg.style.display='none',3000);renderRefs();
+  document.getElementById('n-stock').value=0; document.getElementById('n-seuil').value=5;
+  msg.innerHTML='<div class="alert alert-ok">✅ "'+desig+'" ajoutée.</div>'; msg.style.display='block';
+  setTimeout(()=>msg.style.display='none',3000); renderRefs();
 }
 async function archiveRef(i){
-  const r=refs[i];
-  if(!confirm('Archiver "'+r.desig+'" ?\nElle disparaîtra du stock actif et des QR codes.')) return;
-  archives.unshift({...r,dateArchivage:new Date().toISOString()});
-  refs.splice(i,1);await saveToCloud();renderRefs();renderStock();
-  showToast('🗄️ "'+r.desig+'" archivée','info');
+  const s=curSpace, r=refs[s][i];
+  if(!confirm('Archiver "'+r.desig+'" ?'))return;
+  archives[s].unshift({...r,dateArchivage:new Date().toISOString()}); refs[s].splice(i,1);
+  await saveSpace(s); renderRefs(); renderStock(); showToast('🗄️ Archivée','info');
 }
 async function delRef(i){
-  if(!confirm('Supprimer définitivement "'+refs[i].desig+'" ?')) return;
-  refs.splice(i,1);await saveToCloud();renderRefs();
+  const s=curSpace; if(!confirm('Supprimer "'+refs[s][i].desig+'" ?'))return;
+  refs[s].splice(i,1); await saveSpace(s); renderRefs();
 }
 
 // ════ ARCHIVES ════
 function renderArchives(){
-  const el=document.getElementById('tbody-archives');
-  const count=document.getElementById('archive-count');
-  if(!archives.length){el.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-muted)">Aucune référence archivée</td></tr>';count.textContent='';return;}
-  count.textContent=archives.length+' référence(s)';
-  el.innerHTML=archives.map((a,i)=>{
-    const d=new Date(a.dateArchivage);
-    const ds=d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-    return `<tr><td style="color:var(--text-muted);font-size:0.8rem">${a.famille}</td><td style="font-weight:600">${a.desig}</td><td style="text-align:center;font-weight:800;color:var(--purple)">${a.stock}</td><td style="font-size:0.8rem;color:var(--text-muted)">${ds}</td><td style="display:flex;gap:5px"><button class="btn btn-outline btn-sm" style="color:var(--green);border-color:var(--green)" onclick="restoreRef(${i})">♻️ Restaurer</button><button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="delArchive(${i})">🗑️</button></td></tr>`;
+  const s=curSpace, el=document.getElementById('tbody-archives'), count=document.getElementById('archive-count');
+  if(!(archives[s]||[]).length){el.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">Aucune référence archivée</td></tr>';count.textContent='';return;}
+  count.textContent=archives[s].length+' référence(s)';
+  el.innerHTML=archives[s].map((a,i)=>{
+    const ds=new Date(a.dateArchivage).toLocaleDateString('fr-FR');
+    return `<tr><td style="color:var(--text-muted);font-size:0.78rem">${a.famille}</td><td style="font-weight:600">${a.desig}</td><td style="text-align:center;font-weight:800;color:var(--purple)">${a.stock}</td><td style="font-size:0.78rem;color:var(--text-muted)">${ds}</td><td style="display:flex;gap:4px"><button class="btn btn-outline btn-sm" style="color:var(--green);border-color:var(--green)" onclick="restoreRef(${i})">♻️</button><button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="delArchive(${i})">🗑️</button></td></tr>`;
   }).join('');
 }
-async function restoreRef(i){
-  const a=archives[i];
-  if(!confirm('Restaurer "'+a.desig+'" dans le stock actif ?')) return;
-  const{dateArchivage,...ref}=a;refs.push(ref);archives.splice(i,1);
-  await saveToCloud();renderArchives();renderStock();
-  showToast('♻️ "'+ref.desig+'" restaurée','info');
-}
-async function delArchive(i){
-  if(!confirm('Supprimer définitivement "'+archives[i].desig+'" ?')) return;
-  archives.splice(i,1);await saveToCloud();renderArchives();renderStock();
-}
-
-// ════ GRAPHIQUES ════
-function renderGraphs(){
-  const famFil=document.getElementById('g-fam').value;
-  const fams=[...new Set(refs.map(r=>r.famille))];
-  const sel=document.getElementById('g-fam');const cur=sel.value;
-  sel.innerHTML='<option value="">Toutes familles</option>'+fams.map(f=>`<option value="${f}" ${f===cur?'selected':''}>${f}</option>`).join('');
-  const filtered=famFil?refs.filter(r=>r.famille===famFil):refs;
-  if(chartBar) chartBar.destroy();
-  chartBar=new Chart(document.getElementById('chart-bar'),{type:'bar',data:{
-    labels:filtered.map(r=>r.desig.length>16?r.desig.slice(0,16)+'…':r.desig),
-    datasets:[{label:'Stock',data:filtered.map(r=>r.stock),backgroundColor:filtered.map(r=>r.stock===0?'#dc2626':r.stock<=r.seuil?'#d97706':'#16a34a'),borderRadius:5,borderSkipped:false}]
-  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'#f1f5f9'}}}}});
-  const famData={};refs.forEach(r=>{famData[r.famille]=(famData[r.famille]||0)+r.stock;});
-  const famLabels=Object.keys(famData);
-  const famColors=['#0f3460','#16a34a','#e94560','#d97706','#7c3aed','#0891b2'];
-  if(chartPie) chartPie.destroy();
-  chartPie=new Chart(document.getElementById('chart-pie'),{type:'doughnut',data:{labels:famLabels,datasets:[{data:famLabels.map(f=>famData[f]),backgroundColor:famColors.slice(0,famLabels.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}});
-  const days=parseInt(document.getElementById('g-days').value)||30;
-  const now=new Date();const labels=[],entrees=[],sorties=[];
-  for(let i=days-1;i>=0;i--){
-    const d=new Date(now);d.setDate(d.getDate()-i);
-    const ds=d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
-    const dStr=d.toISOString().slice(0,10);
-    labels.push(ds);
-    entrees.push(histo.filter(h=>h.action==='entree'&&h.date.startsWith(dStr)).reduce((a,h)=>a+h.qty,0));
-    sorties.push(histo.filter(h=>h.action==='sortie'&&h.date.startsWith(dStr)).reduce((a,h)=>a+h.qty,0));
-  }
-  if(chartLine) chartLine.destroy();
-  chartLine=new Chart(document.getElementById('chart-line'),{type:'line',data:{labels,datasets:[
-    {label:'Entrées',data:entrees,borderColor:'#16a34a',backgroundColor:'rgba(22,163,74,0.08)',fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:'#16a34a'},
-    {label:'Sorties',data:sorties,borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,0.08)',fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:'#dc2626'}
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11},padding:12}}},scales:{x:{ticks:{maxTicksLimit:days<=7?7:15,font:{size:10}},grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'#f1f5f9'}}}}});
-}
-
-// ════ PARAMÈTRES ════
-function getEmails(){try{return JSON.parse(localStorage.getItem('stock_emails')||'[]');}catch{return[];}}
-function saveEmails(list){localStorage.setItem('stock_emails',JSON.stringify(list));}
-
-function renderParams(){
-  renderEmailsList();
-  document.getElementById('ejs-service').value=localStorage.getItem('ejs_service')||'';
-  document.getElementById('ejs-template').value=localStorage.getItem('ejs_template')||'';
-  document.getElementById('ejs-pubkey').value=localStorage.getItem('ejs_pubkey')||'';
-}
-function renderEmailsList(){
-  const emails=getEmails();const el=document.getElementById('emails-list');
-  if(!emails.length){el.innerHTML='<div style="padding:14px;text-align:center;color:var(--text-muted);border:1px dashed var(--border);border-radius:8px;font-size:0.87rem">Aucune adresse email</div>';return;}
-  el.innerHTML=emails.map((e,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-bottom:1px solid var(--border)"><span style="font-size:0.9rem">📧 ${e}</span><button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="removeEmail(${i})">🗑️</button></div>`).join('');
-}
-function addEmail(){
-  const val=document.getElementById('new-email').value.trim();
-  if(!val||!val.includes('@')){showToast('Email invalide','warning');return;}
-  const emails=getEmails();if(emails.includes(val)){showToast('Email déjà présent','warning');return;}
-  emails.push(val);saveEmails(emails);document.getElementById('new-email').value='';renderEmailsList();
-  showToast('📧 Email ajouté','info');
-}
-function removeEmail(i){const emails=getEmails();if(!confirm('Supprimer cet email ?'))return;emails.splice(i,1);saveEmails(emails);renderEmailsList();}
-function saveEmailConfig(){
-  const svc=document.getElementById('ejs-service').value.trim();
-  const tpl=document.getElementById('ejs-template').value.trim();
-  const key=document.getElementById('ejs-pubkey').value.trim();
-  if(!svc||!tpl||!key){showToast('Remplissez les 3 champs','warning');return;}
-  localStorage.setItem('ejs_service',svc);localStorage.setItem('ejs_template',tpl);localStorage.setItem('ejs_pubkey',key);
-  const st=document.getElementById('ejs-status');
-  st.innerHTML='<div class="alert alert-ok">✅ Configuration sauvegardée !</div>';st.style.display='block';
-  setTimeout(()=>st.style.display='none',3000);
-}
-async function sendAlertEmail(ref,stock,seuil,user){
-  const emails=getEmails();const svc=localStorage.getItem('ejs_service');const tpl=localStorage.getItem('ejs_template');const key=localStorage.getItem('ejs_pubkey');
-  if(!emails.length||!svc||!tpl||!key) return;
-  try{emailjs.init(key);for(const email of emails){await emailjs.send(svc,tpl,{to_email:email,ref,stock,seuil,user,date:new Date().toLocaleString('fr-FR')});} showToast('📧 Alerte email envoyée','info');}catch(e){console.warn('EmailJS:',e);}
-}
+async function restoreRef(i){ const s=curSpace,a=archives[s][i]; if(!confirm('Restaurer "'+a.desig+'" ?'))return; const{dateArchivage,...ref}=a; refs[s].push(ref); archives[s].splice(i,1); await saveSpace(s); renderArchives(); renderStock(); showToast('♻️ Restaurée','info'); }
+async function delArchive(i){ const s=curSpace; if(!confirm('Supprimer définitivement ?'))return; archives[s].splice(i,1); await saveSpace(s); renderArchives(); renderStock(); }
 
 // ════ EXPORT ════
 function exportCSV(){
-  let c='\uFEFFDate;Désignation;Famille;Action;Quantité;Stock avant;Stock après;Utilisateur\n';
-  histo.forEach(h=>{c+=`"${new Date(h.date).toLocaleString('fr-FR')}";"${h.desig}";"${h.famille}";"${h.action}";${h.qty};${h.avant};${h.apres};"${h.user||''}"\n`;});
+  const s=curSpace, sp=SPACES[s];
+  let c='\uFEFFEspace;Date;Désignation;Famille;Action;Quantité;Stock avant;Stock après;Utilisateur\n';
+  (histo[s]||[]).forEach(h=>{c+=`"${sp.name}";"${new Date(h.date).toLocaleString('fr-FR')}";"${h.desig}";"${h.famille}";"${h.action}";${h.qty};${h.avant};${h.apres};"${h.user||''}"\n`;});
   c+='\n\nSTOCK ACTUEL\nFamille;Désignation;Stock;Seuil\n';
-  refs.forEach(r=>{c+=`"${r.famille}";"${r.desig}";${r.stock};${r.seuil}\n`;});
-  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(c);a.download='stock_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  (refs[s]||[]).forEach(r=>{c+=`"${r.famille}";"${r.desig}";${r.stock};${r.seuil}\n`;});
+  const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(c); a.download=sp.name.replace(/ /g,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+}
+
+function exportExcel(){
+  // Export as CSV with Excel-compatible format
+  const s=curSpace, sp=SPACES[s];
+  let rows=[['Espace','Date','Désignation','Famille','Action','Quantité','Stock avant','Stock après','Utilisateur']];
+  (histo[s]||[]).forEach(h=>rows.push([sp.name,new Date(h.date).toLocaleString('fr-FR'),h.desig,h.famille,h.action,h.qty,h.avant,h.apres,h.user||'']));
+  rows.push([],[],['STOCK ACTUEL'],['Famille','Désignation','Stock','Seuil']);
+  (refs[s]||[]).forEach(r=>rows.push([r.famille,r.desig,r.stock,r.seuil]));
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv); a.download=sp.name.replace(/ /g,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  showToast('📊 Export Excel prêt !','info');
 }
 
 // ════ TOAST ════
-function showToast(msg,type){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}
+function showToast(msg,type){ const t=document.createElement('div'); t.className='toast '+type; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
 
-// ════ QR URL ════
+// ════ URL QR ════
 function checkURL(){
   const p=new URLSearchParams(window.location.search);
-  const ref=p.get('ref'),action=p.get('action');
+  const space=parseInt(p.get('space')), ref=p.get('ref'), action=p.get('action');
   if(ref&&(action==='entree'||action==='sortie')){
-    const r=refs.find(x=>x.id===ref);
+    const s=space||1;
+    switchSpace(s);
+    // Activate correct tab
+    document.querySelectorAll('.space-tab').forEach((t,i)=>t.className='space-tab'+(i+1===s?' active-s'+s:''));
+    const r=(refs[s]||[]).find(x=>x.id===ref);
     if(r) setTimeout(()=>openModal(ref,action),300);
     else showToast('Référence introuvable','warning');
     history.replaceState({},'',location.pathname);
   }
 }
 
-// ════ EXPORT/IMPORT UTILISATEURS ════
-function exportUsers(){
-  const users = getUsers();
-  if(!users.length){showToast('Aucun utilisateur à exporter','warning');return;}
-  const data = JSON.stringify({users, exportDate: new Date().toISOString()}, null, 2);
-  const a = document.createElement('a');
-  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
-  a.download = 'utilisateurs_stock_' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-  showToast('📤 Liste exportée !','info');
-}
-
-function importUsers(input){
-  const file = input.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try{
-      const data = JSON.parse(e.target.result);
-      if(!data.users||!Array.isArray(data.users)) throw new Error();
-      const existing = getUsers();
-      let added = 0;
-      data.users.forEach(u => {
-        if(!existing.find(e=>e.name===u.name)){
-          existing.push(u); added++;
-        }
-      });
-      saveUsers(existing);
-      renderAdminUsers();
-      populateLoginSelect();
-      showToast('✅ '+added+' utilisateur(s) importé(s) !','info');
-    }catch{ showToast('❌ Fichier invalide','warning'); }
-  };
-  reader.readAsText(file);
-  input.value='';
-}
-
-// ════ CHANGER PIN ════
-let cpOldBuf='', cpNewBuf='', cpConfBuf='';
-
-function showChangePinModal(){
-  const user = localStorage.getItem('stock_session');
-  if(!user){showToast('Connectez-vous dabord','warning');return;}
-  cpOldBuf=''; cpNewBuf=''; cpConfBuf='';
-  document.getElementById('change-pin-user').textContent='Utilisateur : '+user;
-  document.getElementById('change-pin-step1').style.display='block';
-  document.getElementById('change-pin-step2').style.display='none';
-  updateDots('cpold-','',false);
-  updateDots('cpnew-','',false);
-  updateDots('cpconf-','',false);
-  document.getElementById('cp-err-old').textContent='';
-  document.getElementById('cp-err-new').textContent='';
-  document.getElementById('amodal-change-pin').classList.add('open');
-}
-
-function closeChangePinModal(){
-  document.getElementById('amodal-change-pin').classList.remove('open');
-  cpOldBuf=''; cpNewBuf=''; cpConfBuf='';
-}
-
-function cpPress(step, d){
-  if(step==='old'){
-    if(cpOldBuf.length>=4) return;
-    cpOldBuf+=d;
-    updateDots('cpold-',cpOldBuf,false);
-    if(cpOldBuf.length===4) setTimeout(()=>checkOldPin(),150);
-  } else {
-    // Remplir nouveau puis confirmation
-    if(cpNewBuf.length<4){
-      cpNewBuf+=d;
-      updateDots('cpnew-',cpNewBuf,false);
-    } else if(cpConfBuf.length<4){
-      cpConfBuf+=d;
-      updateDots('cpconf-',cpConfBuf,false);
-      if(cpConfBuf.length===4) setTimeout(()=>checkNewPin(),150);
-    }
-  }
-}
-
-function cpDel(step){
-  if(step==='old'){
-    cpOldBuf=cpOldBuf.slice(0,-1);
-    updateDots('cpold-',cpOldBuf,false);
-    document.getElementById('cp-err-old').textContent='';
-  } else {
-    if(cpConfBuf.length>0){
-      cpConfBuf=cpConfBuf.slice(0,-1);
-      updateDots('cpconf-',cpConfBuf,false);
-    } else if(cpNewBuf.length>0){
-      cpNewBuf=cpNewBuf.slice(0,-1);
-      updateDots('cpnew-',cpNewBuf,false);
-    }
-    document.getElementById('cp-err-new').textContent='';
-  }
-}
-
-function checkOldPin(){
-  const user=localStorage.getItem('stock_session');
-  const users=getUsers();
-  const u=users.find(x=>x.name===user);
-  if(!u){closeChangePinModal();return;}
-  if(cpOldBuf===(u.pin||DEFAULT_PIN)){
-    // Bon ancien PIN -> passer etape 2
-    document.getElementById('change-pin-step1').style.display='none';
-    document.getElementById('change-pin-step2').style.display='block';
-    cpOldBuf='';
-  } else {
-    for(let i=0;i<4;i++) document.getElementById('cpold-'+i).className='pin-dot error';
-    document.getElementById('cp-err-old').textContent='Ancien PIN incorrect.';
-    setTimeout(()=>{cpOldBuf='';updateDots('cpold-','',false);document.getElementById('cp-err-old').textContent='';},900);
-  }
-}
-
-function checkNewPin(){
-  if(cpNewBuf!==cpConfBuf){
-    for(let i=0;i<4;i++) document.getElementById('cpconf-'+i).className='pin-dot error';
-    document.getElementById('cp-err-new').textContent='Les PIN ne correspondent pas.';
-    setTimeout(()=>{cpConfBuf='';updateDots('cpconf-','',false);document.getElementById('cp-err-new').textContent='';},900);
-    return;
-  }
-  if(cpNewBuf.length!==4||isNaN(cpNewBuf)){
-    document.getElementById('cp-err-new').textContent='PIN invalide.';return;
-  }
-  // Sauvegarder le nouveau PIN
-  const user=localStorage.getItem('stock_session');
-  const users=getUsers();
-  const idx=users.findIndex(x=>x.name===user);
-  if(idx>=0){
-    users[idx].pin=cpNewBuf;
-    saveUsers(users);
-    closeChangePinModal();
-    showToast('🔑 PIN modifié avec succès !','info');
-  }
-}
-
 // ════ INIT ════
-initLogin();
-loadFromCloud();
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();document.getElementById('amodal-login').classList.remove('open');document.getElementById('amodal-panel').classList.remove('open');
-  document.getElementById('amodal-change-pin').classList.remove('open');}});
-document.getElementById('m-qty').addEventListener('keydown',e=>{if(e.key==='Enter')confirmMvt();});
-document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
-document.getElementById('new-user-name').addEventListener('keydown',e=>{if(e.key==='Enter')adminAddUser();});
+async function init(){
+  initLogin();
+  setSyncStatus('syncing');
+  // Load all 3 spaces in parallel
+  await Promise.all([loadSpace(1),loadSpace(2),loadSpace(3)]);
+  document.getElementById('loading').style.display='none';
+  switchSpace(1);
+  checkURL();
+  setSyncStatus('ok');
+}
+
+init();
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeModal(); document.querySelectorAll('.amodal.open').forEach(m=>m.classList.remove('open')); }});
+document.getElementById('m-qty').addEventListener('keydown',e=>{ if(e.key==='Enter')confirmMvt(); });
+document.getElementById('modal').addEventListener('click',e=>{ if(e.target===e.currentTarget)closeModal(); });
+document.getElementById('new-user-name').addEventListener('keydown',e=>{ if(e.key==='Enter')adminAddUser(); });
 </script>
-
-<!-- MODAL CHANGER PIN -->
-<div class="amodal" id="amodal-change-pin">
-  <div class="amodal-box" style="max-width:340px;text-align:center">
-    <div style="font-size:2rem;margin-bottom:10px">🔑</div>
-    <div style="font-size:1.1rem;font-weight:800;color:var(--primary);margin-bottom:5px">Changer mon PIN</div>
-    <div style="font-size:0.84rem;color:var(--text-muted);margin-bottom:18px" id="change-pin-user"></div>
-
-    <div id="change-pin-step1">
-      <div class="pin-label">Ancien PIN</div>
-      <div class="pin-dots" id="cp-dots-old">
-        <div class="pin-dot" id="cpold-0"></div>
-        <div class="pin-dot" id="cpold-1"></div>
-        <div class="pin-dot" id="cpold-2"></div>
-        <div class="pin-dot" id="cpold-3"></div>
-      </div>
-      <div class="login-error" id="cp-err-old"></div>
-      <div class="pin-pad">
-        <button class="pin-btn" onclick="cpPress('old','1')">1</button>
-        <button class="pin-btn" onclick="cpPress('old','2')">2</button>
-        <button class="pin-btn" onclick="cpPress('old','3')">3</button>
-        <button class="pin-btn" onclick="cpPress('old','4')">4</button>
-        <button class="pin-btn" onclick="cpPress('old','5')">5</button>
-        <button class="pin-btn" onclick="cpPress('old','6')">6</button>
-        <button class="pin-btn" onclick="cpPress('old','7')">7</button>
-        <button class="pin-btn" onclick="cpPress('old','8')">8</button>
-        <button class="pin-btn" onclick="cpPress('old','9')">9</button>
-        <button class="pin-btn empty"></button>
-        <button class="pin-btn" onclick="cpPress('old','0')">0</button>
-        <button class="pin-btn" onclick="cpDel('old')">⌫</button>
-      </div>
-    </div>
-
-    <div id="change-pin-step2" style="display:none">
-      <div class="pin-label">Nouveau PIN</div>
-      <div class="pin-dots" id="cp-dots-new">
-        <div class="pin-dot" id="cpnew-0"></div>
-        <div class="pin-dot" id="cpnew-1"></div>
-        <div class="pin-dot" id="cpnew-2"></div>
-        <div class="pin-dot" id="cpnew-3"></div>
-      </div>
-      <div class="pin-label" style="margin-top:14px">Confirmer le nouveau PIN</div>
-      <div class="pin-dots" id="cp-dots-confirm">
-        <div class="pin-dot" id="cpconf-0"></div>
-        <div class="pin-dot" id="cpconf-1"></div>
-        <div class="pin-dot" id="cpconf-2"></div>
-        <div class="pin-dot" id="cpconf-3"></div>
-      </div>
-      <div class="login-error" id="cp-err-new"></div>
-      <div class="pin-pad">
-        <button class="pin-btn" onclick="cpPress('new','1')">1</button>
-        <button class="pin-btn" onclick="cpPress('new','2')">2</button>
-        <button class="pin-btn" onclick="cpPress('new','3')">3</button>
-        <button class="pin-btn" onclick="cpPress('new','4')">4</button>
-        <button class="pin-btn" onclick="cpPress('new','5')">5</button>
-        <button class="pin-btn" onclick="cpPress('new','6')">6</button>
-        <button class="pin-btn" onclick="cpPress('new','7')">7</button>
-        <button class="pin-btn" onclick="cpPress('new','8')">8</button>
-        <button class="pin-btn" onclick="cpPress('new','9')">9</button>
-        <button class="pin-btn empty"></button>
-        <button class="pin-btn" onclick="cpPress('new','0')">0</button>
-        <button class="pin-btn" onclick="cpDel('new')">⌫</button>
-      </div>
-    </div>
-
-    <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="closeChangePinModal()">Annuler</button>
-  </div>
-</div>
 </body>
 </html>
