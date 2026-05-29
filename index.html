@@ -6,6 +6,7 @@
 <title>Gestion Stock — EXTINCTIUM</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 :root {
   --c1:#0f3460; --c1l:#1e4d8c; --c1bg:#e8f0fb;
@@ -425,6 +426,7 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
   <button class="nav-btn" data-page="histo" onclick="goTo(this)">📋 Historique</button>
   <button class="nav-btn" data-page="refs" onclick="goTo(this)">⚙️ Références</button>
   <button class="nav-btn" data-page="archives" onclick="goTo(this)">🗄️ Archives</button>
+  <button class="nav-btn" data-page="params" onclick="goTo(this)">⚙️ Paramètres</button>
 </nav>
 
 <!-- PAGE STOCK -->
@@ -524,6 +526,53 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
       <thead><tr><th>Famille</th><th>Désignation</th><th style="text-align:center">Stock archivé</th><th>Date</th><th>Actions</th></tr></thead>
       <tbody id="tbody-archives"></tbody>
     </table></div>
+  </div>
+</div>
+
+
+<!-- PAGE PARAMÈTRES -->
+<div class="page" id="page-params">
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-header">
+      <span class="card-title s1" id="params-email-title">📧 Alertes email — Stock bas</span>
+      <span style="font-size:0.8rem;color:var(--text-muted)">Email envoyé automatiquement quand le stock passe sous le seuil</span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <input id="new-email" type="email" placeholder="prenom.nom@entreprise.com"
+          style="flex:1;min-width:200px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem">
+        <button class="btn btn-green btn-sm" onclick="addEmail()">➕ Ajouter</button>
+      </div>
+      <div id="emails-list" style="margin-bottom:14px"></div>
+      <div style="background:var(--amber-bg);border-radius:8px;padding:11px 15px;font-size:0.83rem;color:var(--amber)">
+        ⚠️ Les alertes s'appliquent à <strong>tous les espaces</strong> (Reco Non Chargé, Kanban Reco, Kanban Neuf). Les emails sont envoyés via EmailJS (gratuit jusqu'à 200/mois).
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title s1">🔧 Configuration EmailJS</span>
+      <a href="https://www.emailjs.com" target="_blank" class="btn btn-outline btn-sm">📖 Créer un compte</a>
+    </div>
+    <div class="card-body">
+      <div class="form-grid" style="margin-bottom:14px">
+        <div class="form-group"><label>Service ID</label><input id="ejs-service" placeholder="service_xxxxxxx"></div>
+        <div class="form-group"><label>Template ID</label><input id="ejs-template" placeholder="template_xxxxxxx"></div>
+        <div class="form-group"><label>Public Key</label><input id="ejs-pubkey" placeholder="xxxxxxxxxxxxxxx"></div>
+        <div class="form-group" style="justify-content:flex-end;padding-top:20px">
+          <button class="btn btn-s1 btn-sm" id="btn-save-ejs" onclick="saveEmailConfig()">💾 Sauvegarder</button>
+        </div>
+      </div>
+      <div id="ejs-status" style="display:none"></div>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 15px;font-size:0.82rem;color:#1e40af;line-height:1.6">
+        <strong>Guide EmailJS :</strong><br>
+        1. Créez un compte sur <strong>emailjs.com</strong><br>
+        2. Ajoutez un service email → notez le <strong>Service ID</strong><br>
+        3. Créez un template avec <code>{{espace}}</code>, <code>{{ref}}</code>, <code>{{stock}}</code>, <code>{{seuil}}</code>, <code>{{user}}</code> → notez le <strong>Template ID</strong><br>
+        4. Account → API Keys → copiez la <strong>Public Key</strong>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -646,6 +695,7 @@ function switchSpace(s){
     if(pg==='histo') renderHisto();
     if(pg==='refs') renderRefs();
     if(pg==='archives') renderArchives();
+  if(pg==='params') renderParams();
   }
   setSyncStatus('ok');
 }
@@ -823,6 +873,7 @@ function goTo(btn){
   if(pg==='histo') renderHisto();
   if(pg==='refs') renderRefs();
   if(pg==='archives') renderArchives();
+  if(pg==='params') renderParams();
 }
 
 // ════ STOCK ════
@@ -907,6 +958,7 @@ async function confirmMvt(){
   if(modal.action==='entree') r.stock+=qty; else r.stock-=qty;
   const user=localStorage.getItem('stock_session')||'Inconnu';
   histo[s].unshift({date:new Date().toISOString(),id:r.id,desig:r.desig,famille:r.famille,action:modal.action,qty,avant,apres:r.stock,user});
+  if(modal.action==='sortie'&&r.stock<=r.seuil) sendAlertEmail(SPACES[s].name,r.desig+' ('+r.famille+')',r.stock,r.seuil,user);
   const action=modal.action; closeModal(); renderStock();
   showToast((action==='entree'?'▲ +':'▼ -')+qty+' — '+r.desig,action);
   await saveSpace(s);
@@ -1020,6 +1072,76 @@ function checkURL(){
     else showToast('Référence introuvable','warning');
     history.replaceState({},'',location.pathname);
   }
+}
+
+
+// ════ PARAMÈTRES EMAIL ════
+function getEmails(){try{return JSON.parse(localStorage.getItem('stock_emails')||'[]');}catch{return[];}}
+function saveEmails(list){localStorage.setItem('stock_emails',JSON.stringify(list));}
+
+function renderParams(){
+  renderEmailsList();
+  document.getElementById('ejs-service').value=localStorage.getItem('ejs_service')||'';
+  document.getElementById('ejs-template').value=localStorage.getItem('ejs_template')||'';
+  document.getElementById('ejs-pubkey').value=localStorage.getItem('ejs_pubkey')||'';
+}
+
+function renderEmailsList(){
+  const emails=getEmails(), el=document.getElementById('emails-list');
+  if(!emails.length){
+    el.innerHTML='<div style="padding:12px;text-align:center;color:var(--text-muted);border:1px dashed var(--border);border-radius:8px;font-size:0.87rem">Aucune adresse email — ajoutez-en ci-dessus</div>';
+    return;
+  }
+  el.innerHTML=emails.map((e,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-bottom:1px solid var(--border)">
+      <span style="font-size:0.9rem">📧 ${e}</span>
+      <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="removeEmail(${i})">🗑️</button>
+    </div>`).join('');
+}
+
+function addEmail(){
+  const val=document.getElementById('new-email').value.trim();
+  if(!val||!val.includes('@')){showToast('Email invalide','warning');return;}
+  const emails=getEmails();
+  if(emails.includes(val)){showToast('Email déjà présent','warning');return;}
+  emails.push(val); saveEmails(emails);
+  document.getElementById('new-email').value='';
+  renderEmailsList(); showToast('📧 Email ajouté','info');
+}
+
+function removeEmail(i){
+  const emails=getEmails();
+  if(!confirm('Supprimer cet email ?'))return;
+  emails.splice(i,1); saveEmails(emails); renderEmailsList();
+}
+
+function saveEmailConfig(){
+  const svc=document.getElementById('ejs-service').value.trim();
+  const tpl=document.getElementById('ejs-template').value.trim();
+  const key=document.getElementById('ejs-pubkey').value.trim();
+  if(!svc||!tpl||!key){showToast('Remplissez les 3 champs','warning');return;}
+  localStorage.setItem('ejs_service',svc);
+  localStorage.setItem('ejs_template',tpl);
+  localStorage.setItem('ejs_pubkey',key);
+  const st=document.getElementById('ejs-status');
+  st.innerHTML='<div class="alert alert-ok">✅ Configuration sauvegardée !</div>';
+  st.style.display='block';
+  setTimeout(()=>st.style.display='none',3000);
+}
+
+async function sendAlertEmail(espace, ref, stock, seuil, user){
+  const emails=getEmails();
+  const svc=localStorage.getItem('ejs_service');
+  const tpl=localStorage.getItem('ejs_template');
+  const key=localStorage.getItem('ejs_pubkey');
+  if(!emails.length||!svc||!tpl||!key) return;
+  try{
+    emailjs.init(key);
+    for(const email of emails){
+      await emailjs.send(svc,tpl,{to_email:email,espace,ref,stock,seuil,user,date:new Date().toLocaleString('fr-FR')});
+    }
+    showToast('📧 Alerte email envoyée','info');
+  }catch(e){console.warn('EmailJS:',e);}
 }
 
 // ════ INIT ════
