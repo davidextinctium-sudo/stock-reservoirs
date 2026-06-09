@@ -413,10 +413,10 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
     🔵 <span class="tab-label">Reco Non Chargé</span>
   </button>
   <button class="space-tab" id="tab-s2" onclick="switchSpace(2)">
-    🟠 <span class="tab-label">Kanban Reco</span>
+    🟠 <span class="tab-label">Kanban Reco Chargé</span>
   </button>
   <button class="space-tab" id="tab-s3" onclick="switchSpace(3)">
-    🟢 <span class="tab-label">Kanban Neuf</span>
+    🟢 <span class="tab-label">Kanban Neuf Chargé</span>
   </button>
 </div>
 
@@ -500,6 +500,13 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
         <div class="form-group"><label>Stock initial</label><input id="n-stock" type="number" value="0" min="0"></div>
         <div class="form-group"><label>Seuil d'alerte</label><input id="n-seuil" type="number" value="5" min="0"></div>
       </div>
+      <div id="extra-fields" style="display:none;margin-bottom:12px">
+        <div class="form-grid">
+          <div class="form-group"><label>Vanne neuve</label><input id="n-vanne-neuve" placeholder="Ex : IF"></div>
+          <div class="form-group"><label>Vanne reco</label><input id="n-vanne-reco" placeholder="Ex : IF"></div>
+          <div class="form-group"><label>Type de gaz</label><input id="n-type-gaz" placeholder="Ex : IG55"></div>
+        </div>
+      </div>
       <div id="add-ref-msg" style="display:none"></div>
       <button class="btn btn-s1 btn-sm" id="btn-add-ref" onclick="addRef()">➕ Ajouter</button>
     </div>
@@ -555,8 +562,8 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
           <option value="current">Espace actuel</option>
           <option value="all">Les 3 espaces</option>
           <option value="1">Reco Non Chargé</option>
-          <option value="2">Kanban Reco</option>
-          <option value="3">Kanban Neuf</option>
+          <option value="2">Kanban Reco Chargé</option>
+          <option value="3">Kanban Neuf Chargé</option>
         </select>
       </div>
     </div>
@@ -705,8 +712,8 @@ const ADMIN_CODE='5238', DEFAULT_PIN='0000';
 const API_KEY='$2a$10$CsvDZUqgyyBnWfr7AOR/OOvFQwRLkf9DxipllxZXJnx2CWBDFjPSa';
 const SPACES = {
   1: { name:'Reco Non Chargé', icon:'🔵', cls:'s1', binId:'6a0da8606877513b27a26f68' },
-  2: { name:'Kanban Reco',     icon:'🟠', cls:'s2', binId:'6a193b3bddf5aa59f7731dfc' },
-  3: { name:'Kanban Neuf',     icon:'🟢', cls:'s3', binId:'6a193acbddf5aa59f7731c9d' },
+  2: { name:'Kanban Reco Chargé', icon:'🟠', cls:'s2', binId:'6a193b3bddf5aa59f7731dfc' },
+  3: { name:'Kanban Neuf Chargé', icon:'🟢', cls:'s3', binId:'6a193acbddf5aa59f7731c9d' },
 };
 const SPACE_COLORS = {
   1: { primary:'#0f3460', light:'#1e4d8c', bg:'#e8f0fb' },
@@ -714,7 +721,8 @@ const SPACE_COLORS = {
   3: { primary:'#14532d', light:'#166534', bg:'#f0fdf4' },
 };
 
-const DEFAULTS=[
+// Références par espace
+const DEFAULTS_S1=[
   {id:'FYKE80L300B', famille:'Réservoir tout rouge',        desig:'FYKE 80 L - 300 Bar',    stock:0,seuil:5},
   {id:'ROV140L300B', famille:'Réservoir rouge Ogive Verte', desig:'140 L - 300 Bar',         stock:0,seuil:5},
   {id:'ROV140L200B', famille:'Réservoir rouge Ogive Verte', desig:'140 L - 200 Bar',         stock:0,seuil:5},
@@ -735,6 +743,26 @@ const DEFAULTS=[
   {id:'CHB7L200B',   famille:'Réservoir tout vert',         desig:'Chubb 7 L - 200 Bar',     stock:0,seuil:5},
 ];
 
+// Kanban Reco Chargé — Réservoirs Reconditionnés Chargés
+const DEFAULTS_S2=[
+  {id:'KRC_FYKE80_VN',   famille:'Réservoir tout rouge',        desig:'FYKE 80 L - 300 Bar',     vanneNeuve:'IF',  vanneReco:'',    typeGaz:'IG55', stock:0, seuil:3},
+  {id:'KRC_FYKE80_VR',   famille:'Réservoir tout rouge',        desig:'FYKE 80 L - 300 Bar',     vanneNeuve:'',    vanneReco:'IF',  typeGaz:'IG55', stock:0, seuil:3},
+  {id:'KRC_ROV80_300_VN',famille:'Réservoir rouge Ogive Verte', desig:'80 L - 300 Bar',          vanneNeuve:'IF',  vanneReco:'',    typeGaz:'IG55', stock:0, seuil:3},
+  {id:'KRC_ROV80_200_VN',famille:'Réservoir rouge Ogive Verte', desig:'80 L - 200 Bar',          vanneNeuve:'IF',  vanneReco:'',    typeGaz:'IG55', stock:0, seuil:3},
+  {id:'KRC_ROV80_300_VR',famille:'Réservoir rouge Ogive Verte', desig:'80 L - 300 Bar',          vanneNeuve:'',    vanneReco:'IF',  typeGaz:'IG55', stock:0, seuil:3},
+  {id:'KRC_CHB80_300',   famille:'Réservoir tout vert',         desig:'Chubb 80 L - 300 Bar',    vanneNeuve:'',    vanneReco:'B480',typeGaz:'IG55', stock:0, seuil:3},
+];
+
+// Kanban Neuf Chargé — Réservoirs Neufs Chargés
+const DEFAULTS_S3=[
+  {id:'KNC_ROV80_300_VN',famille:'Réservoir rouge Ogive Verte', desig:'80 L - 300 Bar',      vanneNeuve:'IF',    vanneReco:'',   typeGaz:'IG55', stock:0, seuil:3},
+  {id:'KNC_ROV80_200_VN',famille:'Réservoir rouge Ogive Verte', desig:'80 L - 200 Bar',      vanneNeuve:'IF',    vanneReco:'',   typeGaz:'IG55', stock:0, seuil:3},
+  {id:'KNC_ROV50_200_VN',famille:'Réservoir rouge Ogive Verte', desig:'50 L - 200 Bar',      vanneNeuve:'IF',    vanneReco:'',   typeGaz:'IG55', stock:0, seuil:3},
+  {id:'KNC_ROV3_200',    famille:'Réservoir rouge Ogive Verte', desig:'3 L - 200 Bar',        vanneNeuve:'128-90',vanneReco:'',  typeGaz:'IG55', stock:0, seuil:5},
+];
+
+const DEFAULTS = DEFAULTS_S1;
+
 // ════ STATE ════
 let curSpace=1, refs={1:[],2:[],3:[]}, histo={1:[],2:[],3:[]}, archives={1:[],2:[],3:[]};
 let modal={}, pinBuf='', adminPinBuf='', cpOldBuf='', cpNewBuf='', cpConfBuf='';
@@ -748,7 +776,10 @@ async function loadSpace(s){
     if(!r.ok) throw new Error();
     const d=await r.json(), data=d.record;
     if(data.refs&&data.refs.length>0){ refs[s]=data.refs; histo[s]=data.histo||[]; archives[s]=data.archives||[]; }
-    else{ refs[s]=JSON.parse(JSON.stringify(DEFAULTS)); histo[s]=[]; archives[s]=[]; await saveSpace(s); }
+    else{
+      const def = s===1?DEFAULTS_S1:s===2?DEFAULTS_S2:DEFAULTS_S3;
+      refs[s]=JSON.parse(JSON.stringify(def)); histo[s]=[]; archives[s]=[]; await saveSpace(s);
+    }
   }catch{
     try{const l=localStorage.getItem('stock_s'+s);if(l){const d=JSON.parse(l);refs[s]=d.refs||[];histo[s]=d.histo||[];archives[s]=d.archives||[];}else{refs[s]=JSON.parse(JSON.stringify(DEFAULTS));histo[s]=[];archives[s]=[];}}
     catch{refs[s]=JSON.parse(JSON.stringify(DEFAULTS));histo[s]=[];archives[s]=[];}
@@ -993,11 +1024,20 @@ function renderStock(){
   const filtered=(refs[s]||[]).filter(r=>(!q||r.desig.toLowerCase().includes(q)||r.famille.toLowerCase().includes(q))&&(!fam||r.famille===fam));
   const sc=SPACES[s].cls;
   let lastFam=null;
+  const hasExtra = s===2||s===3;
+  // Update table header
+  document.querySelector('#page-stock thead tr').innerHTML = hasExtra
+    ? '<th>Famille</th><th>Désignation</th><th>Vanne neuve</th><th>Vanne reco</th><th>Type gaz</th><th style="text-align:center">Stock</th><th>Statut</th><th>Actions</th>'
+    : '<th>Famille</th><th>Désignation</th><th style="text-align:center">Stock</th><th>Statut</th><th>Actions</th>';
+  document.querySelector('#page-stock thead tr').setAttribute('data-cols', hasExtra?'8':'5');
+
   document.getElementById('tbody-stock').innerHTML=filtered.map(r=>{
     let sep='';
-    if(r.famille!==lastFam){lastFam=r.famille;sep=`<tr class="family-sep ${sc}"><td colspan="5">${r.famille}</td></tr>`;}
+    const cols = hasExtra ? 8 : 5;
+    if(r.famille!==lastFam){lastFam=r.famille;sep=`<tr class="family-sep ${sc}"><td colspan="${cols}">${r.famille}</td></tr>`;}
     const b=r.stock===0?'<span class="badge badge-zero">🚫 Rupture</span>':r.stock<=r.seuil?'<span class="badge badge-low">⚠️ Stock bas</span>':'<span class="badge badge-ok">✅ OK</span>';
-    return sep+`<tr><td style="color:var(--text-muted);font-size:0.78rem">${r.famille}</td><td style="font-weight:600">${r.desig}</td><td style="text-align:center;font-size:1rem;font-weight:800">${r.stock}</td><td>${b}</td><td style="display:flex;gap:5px"><button class="btn btn-green btn-sm" onclick="openModal('${r.id}','entree')">▲</button><button class="btn btn-red btn-sm" onclick="openModal('${r.id}','sortie')">▼</button></td></tr>`;
+    const extraCols = hasExtra ? `<td style="font-size:0.82rem;text-align:center">${r.vanneNeuve||'—'}</td><td style="font-size:0.82rem;text-align:center">${r.vanneReco||'—'}</td><td style="font-size:0.82rem;text-align:center">${r.typeGaz||'—'}</td>` : '';
+    return sep+`<tr><td style="color:var(--text-muted);font-size:0.78rem">${r.famille}</td><td style="font-weight:600">${r.desig}</td>${extraCols}<td style="text-align:center;font-size:1rem;font-weight:800">${r.stock}</td><td>${b}</td><td style="display:flex;gap:5px"><button class="btn btn-green btn-sm" onclick="openModal('${r.id}','entree')">▲</button><button class="btn btn-red btn-sm" onclick="openModal('${r.id}','sortie')">▼</button></td></tr>`;
   }).join('');
   const rr=refs[s]||[];
   document.getElementById('s-total').textContent=rr.length;
@@ -1092,27 +1132,49 @@ async function clearHisto(){ if(!confirm('Vider tout historique ?'))return; hist
 // ════ REFS ════
 function renderRefs(){
   const s=curSpace, fams=[...new Set((refs[s]||[]).map(r=>r.famille))];
+  // Show/hide extra fields
+  const extraFields = document.getElementById('extra-fields');
+  if(extraFields) extraFields.style.display = (s===2||s===3) ? 'block' : 'none';
   document.getElementById('dl-familles').innerHTML=fams.map(f=>`<option value="${f}">`).join('');
-  document.getElementById('tbody-refs').innerHTML=(refs[s]||[]).map((r,i)=>`<tr>
-    <td style="color:var(--text-muted);font-size:0.78rem">${r.famille}</td>
-    <td style="font-weight:600">${r.desig}</td>
-    <td><input type="number" value="${r.stock}" min="0" style="width:65px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.85rem" onchange="updRef(${i},this.value,'stock')"></td>
-    <td><input type="number" value="${r.seuil}" min="0" style="width:65px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.85rem" onchange="updRef(${i},this.value,'seuil')"></td>
-    <td style="display:flex;gap:4px">
-      <button class="btn btn-outline btn-sm" style="color:var(--amber);border-color:var(--amber)" onclick="archiveRef(${i})">🗄️</button>
-      <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="delRef(${i})">🗑️</button>
-    </td></tr>`).join('');
+  const hasExtraR = s===2||s===3;
+  // Update refs table header
+  document.querySelector('#page-refs .tbl-wrap thead tr').innerHTML = hasExtraR
+    ? '<th>Famille</th><th>Désignation</th><th>Vanne neuve</th><th>Vanne reco</th><th>Type gaz</th><th>Stock</th><th>Seuil</th><th>Actions</th>'
+    : '<th>Famille</th><th>Désignation</th><th>Stock</th><th>Seuil</th><th>Actions</th>';
+
+  document.getElementById('tbody-refs').innerHTML=(refs[s]||[]).map((r,i)=>{
+    const extraCols = hasExtraR ? `
+      <td><input type="text" value="${r.vanneNeuve||''}" style="width:80px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.82rem" onchange="updRef(${i},this.value,'vanneNeuve')" placeholder="—"></td>
+      <td><input type="text" value="${r.vanneReco||''}" style="width:80px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.82rem" onchange="updRef(${i},this.value,'vanneReco')" placeholder="—"></td>
+      <td><input type="text" value="${r.typeGaz||''}" style="width:70px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.82rem" onchange="updRef(${i},this.value,'typeGaz')" placeholder="—"></td>` : '';
+    return `<tr>
+      <td style="color:var(--text-muted);font-size:0.78rem">${r.famille}</td>
+      <td style="font-weight:600">${r.desig}</td>
+      ${extraCols}
+      <td><input type="number" value="${r.stock}" min="0" style="width:65px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.85rem" onchange="updRef(${i},this.value,'stock')"></td>
+      <td><input type="number" value="${r.seuil}" min="0" style="width:65px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.85rem" onchange="updRef(${i},this.value,'seuil')"></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-outline btn-sm" style="color:var(--amber);border-color:var(--amber)" onclick="archiveRef(${i})">🗄️</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="delRef(${i})">🗑️</button>
+      </td></tr>`;
+  }).join('');
 }
 async function updRef(i,val,field){ const s=curSpace; refs[s][i][field]=parseInt(val)||0; await saveSpace(s); }
 async function addRef(){
   const s=curSpace, famille=document.getElementById('n-famille').value.trim(), desig=document.getElementById('n-desig').value.trim();
   const stock=parseInt(document.getElementById('n-stock').value)||0, seuil=parseInt(document.getElementById('n-seuil').value)||5;
+  const vanneNeuve=(document.getElementById('n-vanne-neuve')||{value:''}).value.trim();
+  const vanneReco=(document.getElementById('n-vanne-reco')||{value:''}).value.trim();
+  const typeGaz=(document.getElementById('n-type-gaz')||{value:''}).value.trim();
   const msg=document.getElementById('add-ref-msg');
   if(!famille||!desig){msg.innerHTML='<div class="alert alert-err">Famille et désignation obligatoires.</div>';msg.style.display='block';return;}
-  const id='REF'+Date.now(); refs[s].push({id,famille,desig,stock,seuil});
+  const id='REF'+Date.now();
+  const newRef={id,famille,desig,stock,seuil};
+  if(s===2||s===3){newRef.vanneNeuve=vanneNeuve;newRef.vanneReco=vanneReco;newRef.typeGaz=typeGaz;}
+  refs[s].push(newRef);
   if(stock>0) histo[s].unshift({date:new Date().toISOString(),id,desig,famille,action:'entree',qty:stock,avant:0,apres:stock,user:localStorage.getItem('stock_session')||'Inconnu'});
   await saveSpace(s);
-  ['n-famille','n-desig'].forEach(x=>document.getElementById(x).value='');
+  ['n-famille','n-desig','n-vanne-neuve','n-vanne-reco','n-type-gaz'].forEach(x=>{const el=document.getElementById(x);if(el)el.value='';});
   document.getElementById('n-stock').value=0; document.getElementById('n-seuil').value=5;
   msg.innerHTML='<div class="alert alert-ok">✅ "'+desig+'" ajoutée.</div>'; msg.style.display='block';
   setTimeout(()=>msg.style.display='none',3000); renderRefs();
