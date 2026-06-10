@@ -428,7 +428,7 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
   <button class="nav-btn" data-page="refs" onclick="goTo(this)">⚙️ Références</button>
   <button class="nav-btn" data-page="archives" onclick="goTo(this)">🗄️ Archives</button>
   <button class="nav-btn" data-page="graphs" onclick="goTo(this)">📊 Graphiques</button>
-  <button class="nav-btn" data-page="params" onclick="goTo(this)">⚙️ Paramètres</button>
+  <button class="nav-btn" data-page="params" onclick="goTo(this)">⚙️ Paramètres 🔒</button>
 </nav>
 
 <!-- PAGE STOCK -->
@@ -832,7 +832,11 @@ function switchSpace(s){
     if(pg==='histo') renderHisto();
     if(pg==='refs') renderRefs();
     if(pg==='archives') renderArchives();
-  if(pg==='params') renderParams();
+  if(pg==='params'){
+    paramsUnlocked = false;
+    showParamsLock();
+    return;
+  }
   if(pg==='graphs') renderGraphs();
   }
   setSyncStatus('ok');
@@ -1011,7 +1015,11 @@ function goTo(btn){
   if(pg==='histo') renderHisto();
   if(pg==='refs') renderRefs();
   if(pg==='archives') renderArchives();
-  if(pg==='params') renderParams();
+  if(pg==='params'){
+    paramsUnlocked = false;
+    showParamsLock();
+    return;
+  }
   if(pg==='graphs') renderGraphs();
 }
 
@@ -1417,6 +1425,61 @@ function renderGraphs(){
 }
 
 
+
+// ════ PARAMS LOCK ════
+let paramsLockBuf = '';
+let paramsUnlocked = false;
+
+function showParamsLock(){
+  paramsLockBuf = '';
+  updateDots('pdot-', '', false);
+  document.getElementById('params-lock-err').textContent = '';
+  document.getElementById('amodal-params-lock').classList.add('open');
+}
+
+function closeParamsLock(){
+  document.getElementById('amodal-params-lock').classList.remove('open');
+  paramsLockBuf = '';
+  // Go back to stock page
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-stock').classList.add('active');
+  document.querySelector('.nav-btn[data-page="stock"]').classList.add('active');
+  renderStock();
+}
+
+function paramsLockPress(d){
+  if(paramsLockBuf.length>=4) return;
+  paramsLockBuf+=d;
+  updateDots('pdot-', paramsLockBuf, false);
+  if(paramsLockBuf.length===4) setTimeout(()=>checkParamsLock(paramsLockBuf), 150);
+}
+
+function paramsLockDel(){
+  paramsLockBuf = paramsLockBuf.slice(0,-1);
+  updateDots('pdot-', paramsLockBuf, false);
+  document.getElementById('params-lock-err').textContent = '';
+}
+
+function checkParamsLock(pin){
+  if(pin===ADMIN_CODE){
+    paramsUnlocked = true;
+    document.getElementById('amodal-params-lock').classList.remove('open');
+    paramsLockBuf = '';
+    // Show params page
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('page-params').classList.add('active');
+    const btn = document.querySelector('.nav-btn[data-page="params"]');
+    if(btn){ btn.classList.add('active'); btn.className='nav-btn active '+SPACES[curSpace].cls; }
+    renderParams();
+  } else {
+    for(let i=0;i<4;i++) document.getElementById('pdot-'+i).className='pin-dot error';
+    document.getElementById('params-lock-err').textContent = 'Code incorrect.';
+    setTimeout(()=>{ paramsLockBuf=''; updateDots('pdot-','',false); document.getElementById('params-lock-err').textContent=''; }, 900);
+  }
+}
+
 // ════ ARCHIVAGE ANNUEL ════
 function getArchivedYears(){ try{return JSON.parse(localStorage.getItem('stock_archived_years')||'{}');}catch{return{};} }
 function saveArchivedYears(data){ localStorage.setItem('stock_archived_years', JSON.stringify(data)); }
@@ -1576,6 +1639,10 @@ function saveEmails(list){localStorage.setItem('stock_emails',JSON.stringify(lis
 function renderParams(){
   updateArchiveStats();
   renderEmailsList();
+  // Pre-fill with configured values if not already set
+  if(!localStorage.getItem('ejs_service')) localStorage.setItem('ejs_service','service_nrye1f7');
+  if(!localStorage.getItem('ejs_template')) localStorage.setItem('ejs_template','template_hh3zjmd');
+  if(!localStorage.getItem('ejs_pubkey')) localStorage.setItem('ejs_pubkey','KxrAlya0TOurk8jxU');
   document.getElementById('ejs-service').value=localStorage.getItem('ejs_service')||'';
   document.getElementById('ejs-template').value=localStorage.getItem('ejs_template')||'';
   document.getElementById('ejs-pubkey').value=localStorage.getItem('ejs_pubkey')||'';
@@ -1657,5 +1724,37 @@ document.getElementById('m-qty').addEventListener('keydown',e=>{ if(e.key==='Ent
 document.getElementById('modal').addEventListener('click',e=>{ if(e.target===e.currentTarget)closeModal(); });
 document.getElementById('new-user-name').addEventListener('keydown',e=>{ if(e.key==='Enter')adminAddUser(); });
 </script>
+
+<!-- MODAL ADMIN PARAMS -->
+<div class="amodal" id="amodal-params-lock">
+  <div class="amodal-box" style="max-width:320px;text-align:center">
+    <div style="font-size:2rem;margin-bottom:10px">🔐</div>
+    <div style="font-size:1.05rem;font-weight:800;color:var(--c1);margin-bottom:5px">Accès Paramètres</div>
+    <div style="font-size:0.84rem;color:var(--text-muted);margin-bottom:18px">Entrez le code admin pour accéder aux paramètres</div>
+    <div class="pin-label">Code Admin</div>
+    <div class="pin-dots" id="pdots">
+      <div class="pin-dot" id="pdot-0"></div>
+      <div class="pin-dot" id="pdot-1"></div>
+      <div class="pin-dot" id="pdot-2"></div>
+      <div class="pin-dot" id="pdot-3"></div>
+    </div>
+    <div class="login-error" id="params-lock-err"></div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="paramsLockPress('1')">1</button>
+      <button class="pin-btn" onclick="paramsLockPress('2')">2</button>
+      <button class="pin-btn" onclick="paramsLockPress('3')">3</button>
+      <button class="pin-btn" onclick="paramsLockPress('4')">4</button>
+      <button class="pin-btn" onclick="paramsLockPress('5')">5</button>
+      <button class="pin-btn" onclick="paramsLockPress('6')">6</button>
+      <button class="pin-btn" onclick="paramsLockPress('7')">7</button>
+      <button class="pin-btn" onclick="paramsLockPress('8')">8</button>
+      <button class="pin-btn" onclick="paramsLockPress('9')">9</button>
+      <button class="pin-btn empty"></button>
+      <button class="pin-btn" onclick="paramsLockPress('0')">0</button>
+      <button class="pin-btn" onclick="paramsLockDel()">⌫</button>
+    </div>
+    <button class="btn btn-outline" style="width:100%" onclick="closeParamsLock()">Annuler</button>
+  </div>
+</div>
 </body>
 </html>
