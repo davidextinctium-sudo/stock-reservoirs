@@ -431,6 +431,28 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
   <button class="nav-btn" data-page="params" onclick="goTo(this)">⚙️ Paramètres 🔒</button>
 </nav>
 
+
+<!-- BLOCAGE SAUVEGARDE OBLIGATOIRE -->
+<div id="save-blocker" style="display:none;position:fixed;inset:0;background:rgba(220,38,38,0.97);z-index:5000;align-items:center;justify-content:center;flex-direction:column;">
+  <div style="background:white;border-radius:16px;padding:40px 36px;max-width:460px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+    <div style="font-size:4rem;margin-bottom:16px;animation:pulse2 1s infinite">🚨</div>
+    <div style="font-size:1.3rem;font-weight:800;color:#dc2626;margin-bottom:10px">SAUVEGARDE REQUISE</div>
+    <div style="font-size:0.95rem;color:#64748b;margin-bottom:8px" id="blocker-days-text">Aucune sauvegarde détectée</div>
+    <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:28px">Vous devez sauvegarder vos données avant de continuer.</div>
+    <div style="background:#fee2e2;border-radius:10px;padding:14px;margin-bottom:24px;font-size:0.83rem;color:#dc2626;text-align:left;line-height:1.6">
+      ⚠️ Sans sauvegarde régulière, vos données pourraient être perdues en cas de panne.<br>
+      📁 Le fichier sera téléchargé sur votre ordinateur.
+    </div>
+    <button onclick="doBlockerExport()" style="width:100%;padding:16px;background:#dc2626;color:white;border:none;border-radius:10px;font-size:1.05rem;font-weight:800;cursor:pointer;margin-bottom:12px;transition:all 0.2s;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+      💾 SAUVEGARDER MAINTENANT
+    </button>
+    <div style="font-size:0.75rem;color:#94a3b8">Cette action est obligatoire — vous ne pouvez pas continuer sans sauvegarder</div>
+  </div>
+</div>
+<style>
+@keyframes pulse2{0%,100%{transform:scale(1)}50%{transform:scale(1.1)};}
+</style>
+
 <!-- PAGE STOCK -->
 <div class="page active" id="page-stock">
   <div class="stats-row">
@@ -671,7 +693,8 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
     <div class="card-body">
       <div class="form-grid" style="margin-bottom:14px">
         <div class="form-group"><label>Service ID</label><input id="ejs-service" placeholder="service_xxxxxxx"></div>
-        <div class="form-group"><label>Template ID</label><input id="ejs-template" placeholder="template_xxxxxxx"></div>
+        <div class="form-group"><label>Template ID — Alertes stock bas</label><input id="ejs-template" placeholder="template_xxxxxxx"></div>
+        <div class="form-group"><label>Template ID — Résumé quotidien</label><input id="ejs-template-summary" placeholder="template_xxxxxxx"></div>
         <div class="form-group"><label>Public Key</label><input id="ejs-pubkey" placeholder="xxxxxxxxxxxxxxx"></div>
         <div class="form-group" style="justify-content:flex-end;padding-top:20px">
           <button class="btn btn-s1 btn-sm" id="btn-save-ejs" onclick="saveEmailConfig()">💾 Sauvegarder</button>
@@ -912,7 +935,15 @@ function updateDots(prefix,buf,isError){
     el.className='pin-dot'+(isError?' error':i<buf.length?' filled':'');
   }
 }
-function logout(){ if(!confirm('Se déconnecter ?'))return; localStorage.removeItem('stock_session'); pinBuf=''; populateLoginSelect(); updateDots('dot-','',false); document.getElementById('login-error').textContent=''; document.getElementById('login-page').style.display='flex'; }
+function logout(){
+  if(!confirm('Se déconnecter ?'))return;
+  // Export automatique à la déconnexion
+  exportExcelFull();
+  localStorage.removeItem('stock_session');
+  pinBuf=''; populateLoginSelect(); updateDots('dot-','',false);
+  document.getElementById('login-error').textContent='';
+  document.getElementById('login-page').style.display='flex';
+}
 
 // ════ ADMIN ════
 function showAdminLogin(){ adminPinBuf=''; updateDots('adot-','',false); document.getElementById('admin-login-err').textContent=''; document.getElementById('amodal-login').classList.add('open'); }
@@ -1213,6 +1244,7 @@ async function delArchive(i){ const s=curSpace; if(!confirm('Supprimer définiti
 
 // ════ EXPORT ════
 function exportCSV(){
+  localStorage.setItem('last_export_date', new Date().toISOString());
   const s=curSpace, sp=SPACES[s];
   let c='\uFEFFEspace;Date;Désignation;Famille;Action;Quantité;Stock avant;Stock après;Utilisateur\n';
   (histo[s]||[]).forEach(h=>{c+=`"${sp.name}";"${new Date(h.date).toLocaleString('fr-FR')}";"${h.desig}";"${h.famille}";"${h.action}";${h.qty};${h.avant};${h.apres};"${h.user||''}"\n`;});
@@ -1222,6 +1254,7 @@ function exportCSV(){
 }
 
 function exportExcel(){
+  localStorage.setItem('last_export_date', new Date().toISOString());
   // Export as CSV with Excel-compatible format
   const s=curSpace, sp=SPACES[s];
   let rows=[['Espace','Date','Désignation','Famille','Action','Quantité','Stock avant','Stock après','Utilisateur']];
@@ -1425,6 +1458,155 @@ function renderGraphs(){
 }
 
 
+
+
+// ════ RAPPEL EXPORT ════
+function checkExportReminder(){
+  const lastExport = localStorage.getItem('last_export_date');
+  const now = new Date();
+  if(!lastExport){
+    showBlocker('Aucune sauvegarde détectée sur ce poste.');
+    return;
+  }
+  const last = new Date(lastExport);
+  const diffHours = (now - last) / (1000 * 60 * 60);
+  if(diffHours >= 24){
+    const diffDays = Math.floor(diffHours / 24);
+    const msg = diffDays === 1
+      ? 'Dernière sauvegarde : hier'
+      : 'Dernière sauvegarde : il y a '+diffDays+' jours';
+    showBlocker(msg);
+  }
+}
+
+function showBlocker(msg){
+  document.getElementById('blocker-days-text').textContent = msg;
+  document.getElementById('save-blocker').style.display = 'flex';
+}
+
+function hideBlocker(){
+  document.getElementById('save-blocker').style.display = 'none';
+}
+
+function doBlockerExport(){
+  exportExcelFull();
+  setTimeout(()=>hideBlocker(), 500);
+}
+
+function dismissReminder(){
+  hideBlocker();
+}
+
+function exportExcelFull(){
+  // Export complet tous espaces avec SheetJS si disponible, sinon CSV formaté
+  const now = new Date();
+  localStorage.setItem('last_export_date', now.toISOString());
+
+  let rows = [];
+  // En-tête
+  rows.push(['EXTINCTIUM — Export Stock Réservoirs — '+now.toLocaleDateString('fr-FR')]);
+  rows.push([]);
+
+  // Stock actuel — 3 espaces
+  rows.push(['STOCK ACTUEL']);
+  rows.push(['Espace','Famille','Désignation','Vanne Neuve','Vanne Reco','Type Gaz','Stock','Seuil','Statut']);
+  [1,2,3].forEach(s=>{
+    (refs[s]||[]).forEach(r=>{
+      const statut = r.stock===0?'Rupture':r.stock<=r.seuil?'Stock bas':'OK';
+      rows.push([
+        SPACES[s].name, r.famille, r.desig,
+        r.vanneNeuve||'', r.vanneReco||'', r.typeGaz||'',
+        r.stock, r.seuil, statut
+      ]);
+    });
+    rows.push([]); // ligne vide entre espaces
+  });
+
+  rows.push([]);
+  rows.push(['HISTORIQUE DES MOUVEMENTS']);
+  rows.push(['Espace','Date','Désignation','Famille','Action','Quantité','Stock avant','Stock après','Opérateur']);
+  [1,2,3].forEach(s=>{
+    (histo[s]||[]).forEach(h=>{
+      rows.push([
+        SPACES[s].name,
+        new Date(h.date).toLocaleString('fr-FR'),
+        h.desig, h.famille, h.action==='entree'?'Entrée':'Sortie',
+        h.qty, h.avant, h.apres, h.user||''
+      ]);
+    });
+  });
+
+  // Archives locales
+  const archived = getArchivedYears();
+  if(Object.keys(archived).length > 0){
+    rows.push([]);
+    rows.push(['HISTORIQUE ARCHIVÉ']);
+    rows.push(['Année','Espace','Date','Désignation','Famille','Action','Quantité','Stock avant','Stock après','Opérateur']);
+    Object.keys(archived).sort().forEach(year=>{
+      [1,2,3].forEach(s=>{
+        (archived[year][s]||[]).forEach(h=>{
+          rows.push([
+            year, SPACES[s].name,
+            new Date(h.date).toLocaleString('fr-FR'),
+            h.desig, h.famille, h.action==='entree'?'Entrée':'Sortie',
+            h.qty, h.avant, h.apres, h.user||''
+          ]);
+        });
+      });
+    });
+  }
+
+  // Convertir en CSV formaté
+  const csv = rows.map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(';')).join('\n');
+  const filename = 'EXTINCTIUM_Stock_'+now.toISOString().slice(0,10)+'.csv';
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = filename;
+  a.click();
+  showToast('📊 Sauvegarde exportée !','info');
+  // Envoyer email résumé
+  sendDailySummaryEmail();
+}
+
+async function sendDailySummaryEmail(){
+  const svc  = localStorage.getItem('ejs_service');
+  const tpl  = localStorage.getItem('ejs_template_summary');
+  const key  = localStorage.getItem('ejs_pubkey');
+  if(!svc||!tpl||!key) return;
+  
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fr-FR')+' à '+now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  
+  // Construire résumé des 3 espaces
+  let summary = '';
+  [1,2,3].forEach(s=>{
+    const rr = refs[s]||[];
+    const total = rr.reduce((a,r)=>a+r.stock,0);
+    const zero = rr.filter(r=>r.stock===0).length;
+    const low = rr.filter(r=>r.stock>0&&r.stock<=r.seuil).length;
+    summary += SPACES[s].name+' : '+total+' unités | '+zero+' ruptures | '+low+' stocks bas\n';
+  });
+  
+  // Mouvements du jour
+  const todayStr = now.toISOString().slice(0,10);
+  let mvtToday = 0;
+  [1,2,3].forEach(s=>{
+    mvtToday += (histo[s]||[]).filter(h=>h.date.startsWith(todayStr)).length;
+  });
+
+  try{
+    emailjs.init(key);
+    await emailjs.send(svc, tpl, {
+      to_email: 'david.tanguy@extinctium.com',
+      date: dateStr,
+      summary: summary,
+      mvt_today: mvtToday,
+      total_units: [1,2,3].reduce((a,s)=>a+(refs[s]||[]).reduce((b,r)=>b+r.stock,0),0),
+      total_ruptures: [1,2,3].reduce((a,s)=>a+(refs[s]||[]).filter(r=>r.stock===0).length,0),
+    });
+    showToast('📧 Résumé envoyé par email','info');
+  }catch(e){ console.warn('Email summary error:', e); }
+}
 
 // ════ PARAMS LOCK ════
 let paramsLockBuf = '';
@@ -1641,10 +1823,13 @@ function renderParams(){
   renderEmailsList();
   // Pre-fill with configured values if not already set
   if(!localStorage.getItem('ejs_service')) localStorage.setItem('ejs_service','service_nrye1f7');
+  if(!localStorage.getItem('ejs_template_summary')) localStorage.setItem('ejs_template_summary','template_dycf1ul');
   if(!localStorage.getItem('ejs_template')) localStorage.setItem('ejs_template','template_hh3zjmd');
   if(!localStorage.getItem('ejs_pubkey')) localStorage.setItem('ejs_pubkey','KxrAlya0TOurk8jxU');
   document.getElementById('ejs-service').value=localStorage.getItem('ejs_service')||'';
   document.getElementById('ejs-template').value=localStorage.getItem('ejs_template')||'';
+  const tplSumEl = document.getElementById('ejs-template-summary');
+  if(tplSumEl) tplSumEl.value=localStorage.getItem('ejs_template_summary')||'';
   document.getElementById('ejs-pubkey').value=localStorage.getItem('ejs_pubkey')||'';
 }
 
@@ -1680,10 +1865,12 @@ function removeEmail(i){
 function saveEmailConfig(){
   const svc=document.getElementById('ejs-service').value.trim();
   const tpl=document.getElementById('ejs-template').value.trim();
+  const tplSum=(document.getElementById('ejs-template-summary')||{value:''}).value.trim();
   const key=document.getElementById('ejs-pubkey').value.trim();
-  if(!svc||!tpl||!key){showToast('Remplissez les 3 champs','warning');return;}
+  if(!svc||!tpl||!key){showToast('Remplissez les champs obligatoires','warning');return;}
   localStorage.setItem('ejs_service',svc);
   localStorage.setItem('ejs_template',tpl);
+  if(tplSum) localStorage.setItem('ejs_template_summary',tplSum);
   localStorage.setItem('ejs_pubkey',key);
   const st=document.getElementById('ejs-status');
   st.innerHTML='<div class="alert alert-ok">✅ Configuration sauvegardée !</div>';
@@ -1719,6 +1906,8 @@ async function init(){
 }
 
 init();
+// Vérifier rappel export après chargement
+setTimeout(()=>checkExportReminder(), 3000);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeModal(); document.querySelectorAll('.amodal.open').forEach(m=>m.classList.remove('open')); }});
 document.getElementById('m-qty').addEventListener('keydown',e=>{ if(e.key==='Enter')confirmMvt(); });
 document.getElementById('modal').addEventListener('click',e=>{ if(e.target===e.currentTarget)closeModal(); });
