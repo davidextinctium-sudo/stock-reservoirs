@@ -286,13 +286,14 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
     <div class="login-logo">🏭</div>
     <div class="login-title">Gestion Stock</div>
     <div class="login-sub">EXTINCTIUM — Réservoirs</div>
-    <select class="login-select" id="login-select" onchange="resetPin()">
+    <select class="login-select" id="login-select" onchange="resetPin();updateLoginDots(this.value)">
       <option value="">-- Sélectionnez votre nom --</option>
     </select>
     <div class="pin-label">Code PIN</div>
     <div class="pin-dots" id="pin-dots">
       <div class="pin-dot" id="dot-0"></div><div class="pin-dot" id="dot-1"></div>
       <div class="pin-dot" id="dot-2"></div><div class="pin-dot" id="dot-3"></div>
+      <div class="pin-dot" id="dot-4" style="display:none"></div><div class="pin-dot" id="dot-5" style="display:none"></div>
     </div>
     <div class="login-error" id="login-error"></div>
     <div class="pin-pad">
@@ -904,14 +905,37 @@ function populateLoginSelect(){
   sel.innerHTML='<option value="">-- Sélectionnez votre nom --</option>'+users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
 }
 
-function resetPin(){ pinBuf=''; updateDots('dot-',pinBuf,false); document.getElementById('login-error').textContent=''; }
+function resetPin(){
+  pinBuf='';
+  const name=document.getElementById('login-select').value;
+  updateDots('dot-',pinBuf,false);
+  if(name) updateLoginDots(name);
+  document.getElementById('login-error').textContent='';
+}
+
+function getPinLength(name){
+  const users = getUsers();
+  const u = users.find(x=>x.name===name);
+  if(!u) return 4;
+  return (u.pin||'0000').length;
+}
+
+function updateLoginDots(name){
+  const len = getPinLength(name);
+  // Show/hide extra dots
+  for(let i=0;i<6;i++){
+    const el = document.getElementById('dot-'+i);
+    if(el) el.style.display = i<len ? '' : 'none';
+  }
+}
 
 function pinPress(d){
-  if(pinBuf.length>=4) return;
   const name=document.getElementById('login-select').value;
   if(!name){ document.getElementById('login-error').textContent='Sélectionnez votre nom.'; return; }
+  const pinLen = getPinLength(name);
+  if(pinBuf.length>=pinLen) return;
   pinBuf+=d; updateDots('dot-',pinBuf,false);
-  if(pinBuf.length===4) setTimeout(()=>checkPin(name,pinBuf),150);
+  if(pinBuf.length===pinLen) setTimeout(()=>checkPin(name,pinBuf),150);
 }
 function pinDel(){ pinBuf=pinBuf.slice(0,-1); updateDots('dot-',pinBuf,false); document.getElementById('login-error').textContent=''; }
 
