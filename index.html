@@ -315,6 +315,7 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
     <div class="pin-dots" id="adots">
       <div class="pin-dot" id="adot-0"></div><div class="pin-dot" id="adot-1"></div>
       <div class="pin-dot" id="adot-2"></div><div class="pin-dot" id="adot-3"></div>
+      <div class="pin-dot" id="adot-4"></div><div class="pin-dot" id="adot-5"></div>
     </div>
     <div class="login-error" id="admin-login-err"></div>
     <div class="pin-pad">
@@ -401,6 +402,7 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
   </div>
   <div class="header-actions">
     <button class="btn btn-ghost btn-sm" onclick="showChangePinModal()">🔑</button>
+    <button class="btn btn-ghost btn-sm" onclick="showAdminAppPanel()">🛡️</button>
     <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📤 CSV</button>
     <button class="btn btn-ghost btn-sm" onclick="exportExcel()">📊 Excel</button>
     <button class="btn btn-ghost btn-sm" onclick="forcSync()">🔄</button>
@@ -731,7 +733,7 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
 
 <script>
 // ════ CONFIG ════
-const ADMIN_CODE='5238', DEFAULT_PIN='0000';
+const ADMIN_CODE='523845', DEFAULT_PIN='0000';
 const API_KEY='$2a$10$bl82F1g3rnlXV2AInimJAO3Wne8OzKViYSBXm3HjswQawuDV4vJB2';
 const SPACES = {
   1: { name:'Reco Non Chargé', icon:'🔵', cls:'s1', binId:'6a0da8606877513b27a26f68' },
@@ -872,7 +874,7 @@ function saveUsers(list){localStorage.setItem('stock_users_v2',JSON.stringify(li
 function initLogin(){
   if(!getUsers().length){
     saveUsers([
-      {name:'David',    pin:'5238'},
+      {name:'David',    pin:'523845'},
       {name:'Mélanie',  pin:'0000'},
       {name:'Yann',     pin:'0000'},
       {name:'Jean-Luc', pin:'0000'},
@@ -948,7 +950,7 @@ function logout(){
 // ════ ADMIN ════
 function showAdminLogin(){ adminPinBuf=''; updateDots('adot-','',false); document.getElementById('admin-login-err').textContent=''; document.getElementById('amodal-login').classList.add('open'); }
 function closeAdminLogin(){ document.getElementById('amodal-login').classList.remove('open'); adminPinBuf=''; }
-function adminPinPress(d){ if(adminPinBuf.length>=4)return; adminPinBuf+=d; updateDots('adot-',adminPinBuf,false); if(adminPinBuf.length===4) setTimeout(()=>checkAdminPin(adminPinBuf),150); }
+function adminPinPress(d){ if(adminPinBuf.length>=6)return; adminPinBuf+=d; updateDots('adot-',adminPinBuf,false); if(adminPinBuf.length===6) setTimeout(()=>checkAdminPin(adminPinBuf),150); }
 function adminPinDel(){ adminPinBuf=adminPinBuf.slice(0,-1); updateDots('adot-',adminPinBuf,false); }
 function checkAdminPin(pin){
   if(pin===ADMIN_CODE){ document.getElementById('amodal-login').classList.remove('open'); adminPinBuf=''; openAdminPanel(); }
@@ -1193,6 +1195,7 @@ function renderRefs(){
       <td><input type="number" value="${r.stock}" min="0" style="width:65px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.85rem" onchange="updRef(${i},this.value,'stock')"></td>
       <td><input type="number" value="${r.seuil}" min="0" style="width:65px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.85rem" onchange="updRef(${i},this.value,'seuil')"></td>
       <td style="display:flex;gap:4px">
+        <button class="btn btn-outline btn-sm" style="color:var(--c1);border-color:var(--c1)" onclick="openEditRef(${i})">✏️</button>
         <button class="btn btn-outline btn-sm" style="color:var(--amber);border-color:var(--amber)" onclick="archiveRef(${i})">🗄️</button>
         <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="delRef(${i})">🗑️</button>
       </td></tr>`;
@@ -1608,6 +1611,231 @@ async function sendDailySummaryEmail(){
   }catch(e){ console.warn('Email summary error:', e); }
 }
 
+
+// ════ PERMISSIONS PAR UTILISATEUR ════
+const PAGES_LIST = ['histo','refs','archives','graphs'];
+const PAGES_LABELS = {histo:'Historique',refs:'Références',archives:'Archives',graphs:'Graphiques'};
+// Permissions par défaut (false = bloqué, true = libre)
+const DEFAULT_PERMS = {histo:false, refs:false, archives:false, graphs:true};
+const ADMIN_PERMS = {histo:true, refs:true, archives:true, graphs:true};
+const ADMIN_NAME = 'David';
+
+function getUserPerms(name){
+  if(name===ADMIN_NAME) return {...ADMIN_PERMS};
+  try{
+    const all = JSON.parse(localStorage.getItem('stock_user_perms')||'{}');
+    return all[name] || {...DEFAULT_PERMS};
+  }catch{ return {...DEFAULT_PERMS}; }
+}
+
+function saveUserPerms(name, perms){
+  try{
+    const all = JSON.parse(localStorage.getItem('stock_user_perms')||'{}');
+    all[name] = perms;
+    localStorage.setItem('stock_user_perms', JSON.stringify(all));
+  }catch{}
+}
+
+function getLocks(){
+  // Get locks for current user
+  const session = localStorage.getItem('stock_session');
+  if(!session) return {histo:true,refs:true,archives:true,graphs:false};
+  const perms = getUserPerms(session);
+  return {
+    histo: !perms.histo,
+    refs: !perms.refs,
+    archives: !perms.archives,
+    graphs: !perms.graphs,
+  };
+}
+
+function updateNavLockIcons(){
+  const locks = getLocks();
+  const pages = {histo:'nav-histo', refs:'nav-refs', archives:'nav-archives', graphs:'nav-graphs'};
+  const labels = {histo:'📋 Historique', refs:'⚙️ Références', archives:'🗄️ Archives', graphs:'📊 Graphiques'};
+  Object.keys(pages).forEach(pg=>{
+    const el = document.getElementById(pages[pg]);
+    if(el) el.textContent = labels[pg] + (locks[pg] ? ' 🔒' : '');
+  });
+}
+
+function showAdminAppPanel(){
+  adminPinBuf='';
+  updateDots('adot-','',false);
+  document.getElementById('admin-login-err').textContent='';
+  adminPanelTarget = 'app';
+  document.getElementById('amodal-login').classList.add('open');
+}
+
+let adminPanelTarget = 'users';
+
+function openAdminPanel(){
+  if(adminPanelTarget === 'app'){
+    openAdminAppPanel();
+    adminPanelTarget = 'users';
+  } else {
+    renderAdminUsers();
+    document.getElementById('amodal-panel').classList.add('open');
+  }
+}
+
+function openAdminAppPanel(){
+  renderPermissionsTable();
+  document.getElementById('amodal-admin-app').classList.add('open');
+}
+
+function renderPermissionsTable(){
+  const users = getUsers();
+  const tbody = document.getElementById('permissions-tbody');
+  const showPins = document.getElementById('show-pins-toggle')?.checked || false;
+  const countEl = document.getElementById('perm-count');
+  if(countEl) countEl.textContent = users.length;
+
+  if(!users.length){
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted)">Aucun utilisateur</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = users.map((u,i)=>{
+    const isAdmin = u.name === ADMIN_NAME;
+    const perms = getUserPerms(u.name);
+    const rowBg = isAdmin ? 'background:#eff6ff;' : '';
+    const adminBadge = isAdmin ? ' <span style="background:#0f3460;color:white;border-radius:10px;padding:1px 6px;font-size:0.65rem;font-weight:700">ADMIN</span>' : '';
+
+    const checkboxes = PAGES_LIST.map(pg=>`
+      <td style="text-align:center;padding:8px">
+        ${isAdmin
+          ? '<span style="color:var(--green);font-size:1.1rem">✅</span>'
+          : `<input type="checkbox" ${perms[pg]?'checked':''}
+              onchange="toggleUserPerm('${u.name}','${pg}',this.checked)"
+              style="width:16px;height:16px;cursor:pointer">`
+        }
+      </td>`).join('');
+
+    const pinDisplay = showPins
+      ? `<td style="text-align:center;padding:8px">
+          <span style="font-family:monospace;font-weight:700;font-size:0.95rem;color:var(--c1);background:#e8f0fb;padding:3px 8px;border-radius:5px">${u.pin||'0000'}</span>
+         </td>`
+      : `<td style="text-align:center;padding:8px">
+          <input type="password" value="${u.pin||'0000'}" maxlength="4"
+            style="width:70px;padding:4px 7px;border:1.5px solid var(--border);border-radius:6px;font-size:0.85rem;text-align:center;letter-spacing:4px"
+            onchange="changeUserPin(${i},this.value)">
+         </td>`;
+
+    return `<tr style="border-bottom:1px solid var(--border);${rowBg}">
+      <td style="padding:10px 12px;font-weight:600;font-size:0.88rem">👤 ${u.name}${adminBadge}</td>
+      <td style="text-align:center;padding:8px"><span style="color:var(--green)">✅</span></td>
+      <td style="text-align:center;padding:8px"><span style="color:var(--green)">✅</span></td>
+      ${checkboxes}
+      ${pinDisplay}
+      <td style="text-align:center;padding:8px">
+        ${isAdmin ? '<span style="font-size:0.75rem;color:var(--text-muted)">—</span>'
+          : `<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="permRemoveUser(${i})">🗑️</button>`}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleUserPerm(name, page, value){
+  const perms = getUserPerms(name);
+  perms[page] = value;
+  saveUserPerms(name, perms);
+  // Update nav if it's the current user
+  if(localStorage.getItem('stock_session')===name) updateNavLockIcons();
+  showToast('✅ Permission mise à jour pour '+name,'info');
+}
+
+function permAddUser(){
+  const name = document.getElementById('perm-new-name').value.trim();
+  const pin = document.getElementById('perm-new-pin').value.trim()||'0000';
+  const err = document.getElementById('perm-add-err');
+  if(!name){err.textContent='Nom obligatoire.';err.style.display='block';return;}
+  if(pin.length!==4||isNaN(pin)){err.textContent='PIN = 4 chiffres.';err.style.display='block';return;}
+  const users = getUsers();
+  if(users.find(u=>u.name===name)){err.textContent='Utilisateur déjà existant.';err.style.display='block';return;}
+  users.push({name,pin});
+  saveUsers(users);
+  // Set default permissions
+  saveUserPerms(name, {...DEFAULT_PERMS});
+  document.getElementById('perm-new-name').value='';
+  document.getElementById('perm-new-pin').value='';
+  err.style.display='none';
+  renderPermissionsTable();
+  showToast('👤 "'+name+'" ajouté','info');
+}
+
+function permRemoveUser(i){
+  const users = getUsers();
+  if(!confirm('Supprimer "'+users[i].name+'" ?')) return;
+  users.splice(i,1);
+  saveUsers(users);
+  renderPermissionsTable();
+}
+
+function saveLockSettings(){ updateNavLockIcons(); }
+
+
+// ════ MODIFIER RÉFÉRENCE ════
+function openEditRef(i){
+  const s = curSpace;
+  const r = refs[s][i];
+  if(!r) return;
+  document.getElementById('edit-ref-idx').value = i;
+  document.getElementById('edit-famille').value = r.famille||'';
+  document.getElementById('edit-desig').value = r.desig||'';
+  document.getElementById('edit-stock').value = r.stock||0;
+  document.getElementById('edit-seuil').value = r.seuil||5;
+  // Extra fields for spaces 2 and 3
+  const extraFields = document.getElementById('edit-extra-fields');
+  if(s===2||s===3){
+    extraFields.style.display='block';
+    document.getElementById('edit-vanne-neuve').value = r.vanneNeuve||'';
+    document.getElementById('edit-vanne-reco').value = r.vanneReco||'';
+    document.getElementById('edit-type-gaz').value = r.typeGaz||'';
+  } else {
+    extraFields.style.display='none';
+  }
+  // Update familles datalist
+  const fams = [...new Set((refs[s]||[]).map(r=>r.famille))];
+  document.getElementById('dl-familles-edit').innerHTML = fams.map(f=>`<option value="${f}">`).join('');
+  // Update confirm button color
+  document.getElementById('btn-save-edit-ref').className = 'btn btn-s'+s;
+  document.getElementById('edit-ref-err').style.display='none';
+  document.getElementById('amodal-edit-ref').classList.add('open');
+}
+
+async function saveEditRef(){
+  const s = curSpace;
+  const i = parseInt(document.getElementById('edit-ref-idx').value);
+  const famille = document.getElementById('edit-famille').value.trim();
+  const desig = document.getElementById('edit-desig').value.trim();
+  const stock = parseInt(document.getElementById('edit-stock').value)||0;
+  const seuil = parseInt(document.getElementById('edit-seuil').value)||5;
+  const err = document.getElementById('edit-ref-err');
+
+  if(!famille||!desig){
+    err.textContent='Famille et désignation obligatoires.';
+    err.style.display='block'; return;
+  }
+
+  refs[s][i].famille = famille;
+  refs[s][i].desig = desig;
+  refs[s][i].stock = stock;
+  refs[s][i].seuil = seuil;
+
+  if(s===2||s===3){
+    refs[s][i].vanneNeuve = document.getElementById('edit-vanne-neuve').value.trim();
+    refs[s][i].vanneReco = document.getElementById('edit-vanne-reco').value.trim();
+    refs[s][i].typeGaz = document.getElementById('edit-type-gaz').value.trim();
+  }
+
+  await saveSpace(s);
+  document.getElementById('amodal-edit-ref').classList.remove('open');
+  renderRefs();
+  renderStock();
+  showToast('✅ Référence modifiée !','info');
+}
+
 // ════ PARAMS LOCK ════
 let paramsLockBuf = '';
 let paramsUnlocked = false;
@@ -1631,10 +1859,10 @@ function closeParamsLock(){
 }
 
 function paramsLockPress(d){
-  if(paramsLockBuf.length>=4) return;
+  if(paramsLockBuf.length>=6) return;
   paramsLockBuf+=d;
   updateDots('pdot-', paramsLockBuf, false);
-  if(paramsLockBuf.length===4) setTimeout(()=>checkParamsLock(paramsLockBuf), 150);
+  if(paramsLockBuf.length===6) setTimeout(()=>checkParamsLock(paramsLockBuf), 150);
 }
 
 function paramsLockDel(){
@@ -1645,16 +1873,31 @@ function paramsLockDel(){
 
 function checkParamsLock(pin){
   if(pin===ADMIN_CODE){
-    paramsUnlocked = true;
     document.getElementById('amodal-params-lock').classList.remove('open');
     paramsLockBuf = '';
-    // Show params page
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById('page-params').classList.add('active');
-    const btn = document.querySelector('.nav-btn[data-page="params"]');
-    if(btn){ btn.classList.add('active'); btn.className='nav-btn active '+SPACES[curSpace].cls; }
-    renderParams();
+
+    if(lockedPageTarget){
+      // Open locked page
+      const pg = lockedPageTarget;
+      lockedPageTarget = '';
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById('page-'+pg).classList.add('active');
+      if(lockedPageBtn){ lockedPageBtn.classList.add('active'); lockedPageBtn.className='nav-btn active '+SPACES[curSpace].cls; }
+      if(pg==='histo') renderHisto();
+      if(pg==='refs') renderRefs();
+      if(pg==='archives') renderArchives();
+      if(pg==='graphs') renderGraphs();
+    } else {
+      // Open params
+      paramsUnlocked = true;
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById('page-params').classList.add('active');
+      const btn = document.querySelector('.nav-btn[data-page="params"]');
+      if(btn){ btn.classList.add('active'); btn.className='nav-btn active '+SPACES[curSpace].cls; }
+      renderParams();
+    }
   } else {
     for(let i=0;i<4;i++) document.getElementById('pdot-'+i).className='pin-dot error';
     document.getElementById('params-lock-err').textContent = 'Code incorrect.';
@@ -1908,6 +2151,8 @@ async function init(){
 init();
 // Vérifier rappel export après chargement
 setTimeout(()=>checkExportReminder(), 3000);
+// Mettre à jour icônes verrous
+updateNavLockIcons();
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeModal(); document.querySelectorAll('.amodal.open').forEach(m=>m.classList.remove('open')); }});
 document.getElementById('m-qty').addEventListener('keydown',e=>{ if(e.key==='Enter')confirmMvt(); });
 document.getElementById('modal').addEventListener('click',e=>{ if(e.target===e.currentTarget)closeModal(); });
@@ -1926,6 +2171,8 @@ document.getElementById('new-user-name').addEventListener('keydown',e=>{ if(e.ke
       <div class="pin-dot" id="pdot-1"></div>
       <div class="pin-dot" id="pdot-2"></div>
       <div class="pin-dot" id="pdot-3"></div>
+      <div class="pin-dot" id="pdot-4"></div>
+      <div class="pin-dot" id="pdot-5"></div>
     </div>
     <div class="login-error" id="params-lock-err"></div>
     <div class="pin-pad">
@@ -1943,6 +2190,94 @@ document.getElementById('new-user-name').addEventListener('keydown',e=>{ if(e.ke
       <button class="pin-btn" onclick="paramsLockDel()">⌫</button>
     </div>
     <button class="btn btn-outline" style="width:100%" onclick="closeParamsLock()">Annuler</button>
+  </div>
+</div>
+
+<!-- MODAL MODIFIER RÉFÉRENCE -->
+<div class="amodal" id="amodal-edit-ref">
+  <div class="amodal-box" style="max-width:480px">
+    <div style="font-size:1.05rem;font-weight:800;color:var(--c1);margin-bottom:18px">✏️ Modifier la référence</div>
+    <input type="hidden" id="edit-ref-idx">
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="form-group"><label>Famille / Couleur</label><input id="edit-famille" list="dl-familles-edit"><datalist id="dl-familles-edit"></datalist></div>
+      <div class="form-group"><label>Désignation</label><input id="edit-desig"></div>
+      <div class="form-group"><label>Stock</label><input id="edit-stock" type="number" min="0"></div>
+      <div class="form-group"><label>Seuil d'alerte</label><input id="edit-seuil" type="number" min="0"></div>
+    </div>
+    <div id="edit-extra-fields" style="display:none;margin-bottom:14px">
+      <div class="form-grid">
+        <div class="form-group"><label>Vanne neuve</label><input id="edit-vanne-neuve" placeholder="Ex : IF"></div>
+        <div class="form-group"><label>Vanne reco</label><input id="edit-vanne-reco" placeholder="Ex : IF"></div>
+        <div class="form-group"><label>Type de gaz</label><input id="edit-type-gaz" placeholder="Ex : IG55"></div>
+      </div>
+    </div>
+    <div id="edit-ref-err" style="color:var(--red);font-size:0.82rem;margin-bottom:10px;display:none"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="document.getElementById('amodal-edit-ref').classList.remove('open')">Annuler</button>
+      <button class="btn btn-s1" id="btn-save-edit-ref" onclick="saveEditRef()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PANEL ADMIN APP — PERMISSIONS -->
+<div class="amodal" id="amodal-admin-app">
+  <div class="amodal-box" style="max-width:700px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;position:sticky;top:0;background:white;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <div style="font-size:1.05rem;font-weight:800;color:var(--c1)">🛡️ Panel Admin — Permissions utilisateurs</div>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('amodal-admin-app').classList.remove('open')">✕</button>
+    </div>
+
+    <div style="font-size:0.83rem;color:var(--text-muted);margin-bottom:14px">
+      Cochez les onglets auxquels chaque utilisateur a accès. ✅ = accès libre · ☐ = accès refusé
+    </div>
+
+    <!-- Tableau permissions -->
+    <div style="overflow-x:auto;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:0.8rem;color:var(--text-muted)">👤 <strong id="perm-count">0</strong> utilisateur(s)</span>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;color:var(--text-muted)">
+          <input type="checkbox" id="show-pins-toggle" onchange="renderPermissionsTable()" style="cursor:pointer">
+          👁️ Afficher les PIN
+        </label>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);min-width:130px">Utilisateur</th>
+            <th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">📦<br>Stock</th>
+            <th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">📲<br>QR</th>
+            <th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">📋<br>Histo</th>
+            <th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">⚙️<br>Refs</th>
+            <th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">🗄️<br>Arch</th>
+            <th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">📊<br>Graph</th>
+            <th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)" id="pin-col-header">PIN</th>
+            <th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">Action</th>
+          </tr>
+        </thead>
+        <tbody id="permissions-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Ajouter utilisateur -->
+    <div style="background:#f8fafc;border-radius:8px;padding:14px;margin-bottom:14px">
+      <div style="font-weight:700;color:var(--c1);margin-bottom:10px;font-size:0.88rem">➕ Ajouter un utilisateur</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <input id="perm-new-name" type="text" placeholder="Prénom ou nom" style="flex:1;min-width:120px;padding:8px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:0.88rem">
+        <input id="perm-new-pin" type="password" placeholder="PIN 4 chiffres" maxlength="4" style="width:120px;padding:8px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:0.88rem;text-align:center;letter-spacing:4px">
+        <button class="btn btn-s1 btn-sm" onclick="permAddUser()">➕ Ajouter</button>
+      </div>
+      <div id="perm-add-err" style="color:var(--red);font-size:0.8rem;display:none"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-s1 btn-sm" onclick="exportUsers()">📤 Exporter la liste</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-users-file2').click()">📂 Importer</button>
+      <input type="file" id="import-users-file2" accept=".json" style="display:none" onchange="importUsers(this)">
+    </div>
+
+    <div style="background:var(--amber-bg);border-radius:8px;padding:10px 14px;font-size:0.8rem;color:var(--amber)">
+      💡 Stock et QR Codes sont toujours accessibles. Paramètres toujours verrouillé admin.
+    </div>
   </div>
 </div>
 </body>
