@@ -735,11 +735,13 @@ tbody td{padding:10px 12px;font-size:0.87rem;vertical-align:middle;}
 <script>
 // ════ CONFIG ════
 const ADMIN_CODE='523845', DEFAULT_PIN='0000';
-const API_KEY='$2a$10$AKWNL8KFF74lN7aoIlBcvOo2b0AqXZow6W0dOBJN47JR4icgx2/hO';
+const SUPABASE_URL = 'https://uxobhnlztbdjneawlgow.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4b2Jobmx6dGJkam5lYXdsZ293Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNzg2NDIsImV4cCI6MjA5Nzg1NDY0Mn0.6jbst7L9tpBRZx2Y-nyEBoGGDfayDVU_Ll0xLTWHaiU';
+const SB_HEADERS = {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
 const SPACES = {
-  1: { name:'Reco Non Chargé', icon:'🔵', cls:'s1', binId:'6a312c29da38895dfec90098' },
-  2: { name:'Kanban Reco Chargé', icon:'🟠', cls:'s2', binId:'6a312c32f5f4af5e29fa835d' },
-  3: { name:'Kanban Neuf Chargé', icon:'🟢', cls:'s3', binId:'6a312c39da38895dfec900cd' },
+  1: { name:'Reco Non Chargé', icon:'🔵', cls:'s1' },
+  2: { name:'Kanban Reco Chargé', icon:'🟠', cls:'s2' },
+  3: { name:'Kanban Neuf Chargé', icon:'🟢', cls:'s3' },
 };
 const SPACE_COLORS = {
   1: { primary:'#0f3460', light:'#1e4d8c', bg:'#e8f0fb' },
@@ -747,77 +749,176 @@ const SPACE_COLORS = {
   3: { primary:'#14532d', light:'#166534', bg:'#f0fdf4' },
 };
 
-// Références par espace
-const DEFAULTS_S1=[
-  {id:'FYKE80L300B', famille:'Réservoir tout rouge',        desig:'FYKE 80 L - 300 Bar',    stock:0,seuil:5},
-  {id:'ROV140L300B', famille:'Réservoir rouge Ogive Verte', desig:'140 L - 300 Bar',         stock:0,seuil:5},
-  {id:'ROV140L200B', famille:'Réservoir rouge Ogive Verte', desig:'140 L - 200 Bar',         stock:0,seuil:5},
-  {id:'ROV80L300B',  famille:'Réservoir rouge Ogive Verte', desig:'80 L - 300 Bar',          stock:0,seuil:5},
-  {id:'ROV80L200B',  famille:'Réservoir rouge Ogive Verte', desig:'80 L - 200 Bar',          stock:0,seuil:5},
-  {id:'ROV50L200B',  famille:'Réservoir rouge Ogive Verte', desig:'50 L - 200 Bar',          stock:0,seuil:3},
-  {id:'ROV268L200B', famille:'Réservoir rouge Ogive Verte', desig:'26,8 L - 200 Bar',        stock:0,seuil:3},
-  {id:'ROV268L250B', famille:'Réservoir rouge Ogive Verte', desig:'26,8 L - 250 Bar',        stock:0,seuil:3},
-  {id:'ROV134L200B', famille:'Réservoir rouge Ogive Verte', desig:'13,4 L - 200 Bar',        stock:0,seuil:3},
-  {id:'ROV134L250B', famille:'Réservoir rouge Ogive Verte', desig:'13,4 L - 250 Bar',        stock:0,seuil:3},
-  {id:'ROV5L250Ba',  famille:'Réservoir rouge Ogive Verte', desig:'5 L - 250 Bar (A)',       stock:0,seuil:5},
-  {id:'ROV5L250Bb',  famille:'Réservoir rouge Ogive Verte', desig:'5 L - 250 Bar (B)',       stock:0,seuil:5},
-  {id:'ROV3L200B',   famille:'Réservoir rouge Ogive Verte', desig:'3 L - 200 Bar',           stock:0,seuil:5},
-  {id:'CHB80L300B',  famille:'Réservoir tout vert',         desig:'Chubb 80 L - 300 Bar',    stock:0,seuil:3},
-  {id:'CHB80L200B',  famille:'Réservoir tout vert',         desig:'Chubb 80 L - 200 Bar',    stock:0,seuil:3},
-  {id:'CHB50L300B',  famille:'Réservoir tout vert',         desig:'Chubb 50 L - 300 Bar',    stock:0,seuil:3},
-  {id:'CHB50L200B',  famille:'Réservoir tout vert',         desig:'Chubb 50 L - 200 Bar',    stock:0,seuil:3},
-  {id:'CHB7L200B',   famille:'Réservoir tout vert',         desig:'Chubb 7 L - 200 Bar',     stock:0,seuil:5},
-];
-
-// Kanban Reco Chargé — Réservoirs Reconditionnés Chargés
-const DEFAULTS_S2=[
-  {id:'KRC_FYKE80_VN',   famille:'Réservoir tout rouge',        desig:'FYKE 80 L - 300 Bar',     vanneNeuve:'IF',  vanneReco:'',    typeGaz:'IG55', stock:0, seuil:3},
-  {id:'KRC_FYKE80_VR',   famille:'Réservoir tout rouge',        desig:'FYKE 80 L - 300 Bar',     vanneNeuve:'',    vanneReco:'IF',  typeGaz:'IG55', stock:0, seuil:3},
-  {id:'KRC_ROV80_300_VN',famille:'Réservoir rouge Ogive Verte', desig:'80 L - 300 Bar',          vanneNeuve:'IF',  vanneReco:'',    typeGaz:'IG55', stock:0, seuil:3},
-  {id:'KRC_ROV80_200_VN',famille:'Réservoir rouge Ogive Verte', desig:'80 L - 200 Bar',          vanneNeuve:'IF',  vanneReco:'',    typeGaz:'IG55', stock:0, seuil:3},
-  {id:'KRC_ROV80_300_VR',famille:'Réservoir rouge Ogive Verte', desig:'80 L - 300 Bar',          vanneNeuve:'',    vanneReco:'IF',  typeGaz:'IG55', stock:0, seuil:3},
-  {id:'KRC_CHB80_300',   famille:'Réservoir tout vert',         desig:'Chubb 80 L - 300 Bar',    vanneNeuve:'',    vanneReco:'B480',typeGaz:'IG55', stock:0, seuil:3},
-];
-
-// Kanban Neuf Chargé — Réservoirs Neufs Chargés
-const DEFAULTS_S3=[
-  {id:'KNC_ROV80_300_VN',famille:'Réservoir rouge Ogive Verte', desig:'80 L - 300 Bar',      vanneNeuve:'IF',    vanneReco:'',   typeGaz:'IG55', stock:0, seuil:3},
-  {id:'KNC_ROV80_200_VN',famille:'Réservoir rouge Ogive Verte', desig:'80 L - 200 Bar',      vanneNeuve:'IF',    vanneReco:'',   typeGaz:'IG55', stock:0, seuil:3},
-  {id:'KNC_ROV50_200_VN',famille:'Réservoir rouge Ogive Verte', desig:'50 L - 200 Bar',      vanneNeuve:'IF',    vanneReco:'',   typeGaz:'IG55', stock:0, seuil:3},
-  {id:'KNC_ROV3_200',    famille:'Réservoir rouge Ogive Verte', desig:'3 L - 200 Bar',        vanneNeuve:'128-90',vanneReco:'',  typeGaz:'IG55', stock:0, seuil:5},
-];
-
-const DEFAULTS = DEFAULTS_S1;
-
 // ════ STATE ════
 let curSpace=1, refs={1:[],2:[],3:[]}, histo={1:[],2:[],3:[]}, archives={1:[],2:[],3:[]};
 let modal={}, pinBuf='', adminPinBuf='', cpOldBuf='', cpNewBuf='', cpConfBuf='';
 
-// ════ CLOUD ════
-function binUrl(s){ return 'https://api.jsonbin.io/v3/b/'+SPACES[s].binId; }
+// ════ SUPABASE CLOUD ════
+async function sbFetch(path, opts={}){
+  const r = await fetch(SUPABASE_URL+path, {...opts, headers:{...SB_HEADERS,...(opts.headers||{})}});
+  if(!r.ok){ const t=await r.text(); throw new Error(t); }
+  return r.json();
+}
 
 async function loadSpace(s){
   try{
-    const r=await fetch(binUrl(s)+'/latest',{headers:{'X-Master-Key':API_KEY}});
-    if(!r.ok) throw new Error();
-    const d=await r.json(), data=d.record;
-    if(data.refs&&data.refs.length>0){ refs[s]=data.refs; histo[s]=data.histo||[]; archives[s]=data.archives||[]; }
-    else{
-      const def = s===1?DEFAULTS_S1:s===2?DEFAULTS_S2:DEFAULTS_S3;
-      refs[s]=JSON.parse(JSON.stringify(def)); histo[s]=[]; archives[s]=[]; await saveSpace(s);
-    }
-  }catch{
-    try{const l=localStorage.getItem('stock_s'+s);if(l){const d=JSON.parse(l);refs[s]=d.refs||[];histo[s]=d.histo||[];archives[s]=d.archives||[];}else{refs[s]=JSON.parse(JSON.stringify(DEFAULTS));histo[s]=[];archives[s]=[];}}
-    catch{refs[s]=JSON.parse(JSON.stringify(DEFAULTS));histo[s]=[];archives[s]=[];}
+    setSyncStatus('syncing');
+    // Charger les refs
+    const refsData = await sbFetch('/rest/v1/refs?espace_id=eq.'+s+'&order=position.asc');
+    refs[s] = refsData.map(r=>({
+      id: r.id,
+      famille: r.famille,
+      desig: r.desig,
+      stock: r.stock,
+      seuil: r.seuil,
+      vanneNeuve: r.vanne_neuve||'',
+      vanneReco: r.vanne_reco||'',
+      typeGaz: r.type_gaz||'',
+      position: r.position||0,
+    }));
+    // Charger l'historique
+    const histoData = await sbFetch('/rest/v1/histo?espace_id=eq.'+s+'&order=created_at.desc&limit=500');
+    histo[s] = histoData.map(h=>({
+      date: h.created_at,
+      id: h.ref_id,
+      desig: h.desig,
+      famille: h.famille,
+      action: h.action,
+      qty: h.qty,
+      avant: h.avant,
+      apres: h.apres,
+      user: h.utilisateur,
+    }));
+    // Charger les archives
+    const archData = await sbFetch('/rest/v1/archives?espace_id=eq.'+s+'&order=archived_at.desc');
+    archives[s] = archData.map(a=>({...a.data, dateArchivage:a.archived_at, supabase_id:a.id}));
+    setSyncStatus('ok');
+  }catch(e){
+    console.error('Supabase load error:', e);
+    // Fallback localStorage
+    try{const l=localStorage.getItem('stock_s'+s);if(l){const d=JSON.parse(l);refs[s]=d.refs||[];histo[s]=d.histo||[];archives[s]=d.archives||[];}}
+    catch{}
+    setSyncStatus('error');
   }
 }
 
+async function saveStock(s, refId, newStock){
+  // Sauvegarde uniquement le stock d'une référence
+  try{
+    await sbFetch('/rest/v1/refs?id=eq.'+refId+'&espace_id=eq.'+s, {
+      method:'PATCH',
+      body: JSON.stringify({stock: newStock})
+    });
+  }catch(e){ console.error('saveStock error:', e); }
+}
+
+async function saveHisto(s, entry){
+  try{
+    await sbFetch('/rest/v1/histo', {
+      method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        espace_id: s,
+        ref_id: entry.id,
+        desig: entry.desig,
+        famille: entry.famille,
+        action: entry.action,
+        qty: entry.qty,
+        avant: entry.avant,
+        apres: entry.apres,
+        utilisateur: entry.user,
+        created_at: entry.date,
+      })
+    });
+  }catch(e){ console.error('saveHisto error:', e); }
+}
+
+async function saveRefField(s, refId, field, value){
+  // field: 'famille','desig','stock','seuil','vanne_neuve','vanne_reco','type_gaz'
+  try{
+    await sbFetch('/rest/v1/refs?id=eq.'+refId+'&espace_id=eq.'+s, {
+      method:'PATCH',
+      body: JSON.stringify({[field]: value})
+    });
+  }catch(e){ console.error('saveRefField error:', e); }
+}
+
+async function saveRefOrder(s){
+  // Sauvegarder les positions de toutes les refs de l'espace
+  try{
+    for(let i=0; i<refs[s].length; i++){
+      await sbFetch('/rest/v1/refs?id=eq.'+refs[s][i].id+'&espace_id=eq.'+s, {
+        method:'PATCH',
+        body: JSON.stringify({position: i+1})
+      });
+    }
+  }catch(e){ console.error('saveRefOrder error:', e); }
+}
+
+async function addRefToSupabase(s, ref){
+  try{
+    const pos = (refs[s].length)+1;
+    await sbFetch('/rest/v1/refs', {
+      method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        id: ref.id,
+        espace_id: s,
+        famille: ref.famille,
+        desig: ref.desig,
+        stock: ref.stock||0,
+        seuil: ref.seuil||3,
+        vanne_neuve: ref.vanneNeuve||'',
+        vanne_reco: ref.vanneReco||'',
+        type_gaz: ref.typeGaz||'',
+        position: pos,
+      })
+    });
+  }catch(e){ console.error('addRef error:', e); throw e; }
+}
+
+async function deleteRefFromSupabase(s, refId){
+  try{
+    await sbFetch('/rest/v1/refs?id=eq.'+refId+'&espace_id=eq.'+s, {method:'DELETE'});
+  }catch(e){ console.error('deleteRef error:', e); }
+}
+
+async function archiveRefInSupabase(s, ref){
+  try{
+    await sbFetch('/rest/v1/archives', {
+      method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({espace_id:s, ref_id:ref.id, data:ref})
+    });
+    await deleteRefFromSupabase(s, ref.id);
+  }catch(e){ console.error('archiveRef error:', e); throw e; }
+}
+
+async function restoreRefInSupabase(s, archiveId, ref){
+  try{
+    // Supprimer l'archive
+    await sbFetch('/rest/v1/archives?id=eq.'+archiveId, {method:'DELETE'});
+    // Réinsérer la ref
+    await addRefToSupabase(s, ref);
+  }catch(e){ console.error('restoreRef error:', e); throw e; }
+}
+
+async function deleteArchiveInSupabase(archiveId){
+  try{
+    await sbFetch('/rest/v1/archives?id=eq.'+archiveId, {method:'DELETE'});
+  }catch(e){ console.error('deleteArchive error:', e); }
+}
+
+async function clearHistoInSupabase(s){
+  try{
+    await sbFetch('/rest/v1/histo?espace_id=eq.'+s, {method:'DELETE'});
+  }catch(e){ console.error('clearHisto error:', e); }
+}
+
+// Compatibilité avec l'ancien saveSpace (utilisé dans certaines fonctions)
 async function saveSpace(s){
   localStorage.setItem('stock_s'+s, JSON.stringify({refs:refs[s],histo:histo[s],archives:archives[s]}));
-  try{
-    await fetch(binUrl(s),{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},body:JSON.stringify({refs:refs[s],histo:histo[s],archives:archives[s]})});
-    setSyncStatus('ok');
-  }catch{ setSyncStatus('error'); }
+  setSyncStatus('ok');
 }
 
 function setSyncStatus(s){
@@ -873,36 +974,14 @@ function getUsers(){try{return JSON.parse(localStorage.getItem('stock_users_v2')
 function saveUsers(list){localStorage.setItem('stock_users_v2',JSON.stringify(list));}
 
 function initLogin(){
-  if(!getUsers().length){
-    saveUsers([
-      {name:'David',    pin:'523845'},
-      {name:'Mélanie',  pin:'0000'},
-      {name:'Yann',     pin:'0000'},
-      {name:'Jean-Luc', pin:'0000'},
-      {name:'Pierre',   pin:'0000'},
-      {name:'Pierrick', pin:'0000'},
-      {name:'Manon',    pin:'0000'},
-      {name:'Pauline',  pin:'0000'},
-      {name:'Steve',    pin:'0000'},
-      {name:'Kévin',    pin:'0000'},
-      {name:'Halil can',pin:'0000'},
-      {name:'Halil',    pin:'0000'},
-      {name:'Quentin',  pin:'0000'},
-      {name:'Nicolas',  pin:'0000'},
-      {name:'Lionel',   pin:'0000'},
-      {name:'William',  pin:'0000'},
-      {name:'Fabien',   pin:'0000'},
-      {name:'Melody',   pin:'0000'},
-    ]);
-  }
   populateLoginSelect();
   const session=localStorage.getItem('stock_session');
   if(session){ document.getElementById('login-page').style.display='none'; document.getElementById('header-user').textContent='👤 '+session; }
 }
 
 function populateLoginSelect(){
-  const users=getUsers(), sel=document.getElementById('login-select');
-  sel.innerHTML='<option value="">-- Sélectionnez votre nom --</option>'+users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  const sel=document.getElementById('login-select');
+  sel.innerHTML='<option value="">-- Sélectionnez votre nom --</option>'+sbUsers.map(u=>`<option value="${u.nom}">${u.nom}</option>`).join('');
 }
 
 function resetPin(){
@@ -914,8 +993,7 @@ function resetPin(){
 }
 
 function getPinLength(name){
-  const users = getUsers();
-  const u = users.find(x=>x.name===name);
+  const u = sbUsers.find(x=>x.nom===name);
   if(!u) return 4;
   return (u.pin||'0000').length;
 }
@@ -940,7 +1018,7 @@ function pinPress(d){
 function pinDel(){ pinBuf=pinBuf.slice(0,-1); updateDots('dot-',pinBuf,false); document.getElementById('login-error').textContent=''; }
 
 function checkPin(name,pin){
-  const users=getUsers(), u=users.find(x=>x.name===name);
+  const u=sbUsers.find(x=>x.nom===name);
   if(!u){resetPin();return;}
   if(pin===(u.pin||DEFAULT_PIN)){
     localStorage.setItem('stock_session',name);
@@ -948,6 +1026,7 @@ function checkPin(name,pin){
     document.getElementById('header-user').textContent='👤 '+name;
     showToast('👤 Bienvenue '+name+' !','info');
     pinBuf='';
+    updateNavLockIcons();
   }else{
     for(let i=0;i<4;i++) document.getElementById('dot-'+i).className='pin-dot error';
     document.getElementById('login-error').textContent='Code PIN incorrect.';
@@ -1176,11 +1255,16 @@ async function confirmMvt(){
   const avant=r.stock;
   if(modal.action==='entree') r.stock+=qty; else r.stock-=qty;
   const user=localStorage.getItem('stock_session')||'Inconnu';
-  histo[s].unshift({date:new Date().toISOString(),id:r.id,desig:r.desig,famille:r.famille,action:modal.action,qty,avant,apres:r.stock,user});
+  const entry={date:new Date().toISOString(),id:r.id,desig:r.desig,famille:r.famille,action:modal.action,qty,avant,apres:r.stock,user};
+  histo[s].unshift(entry);
   if(modal.action==='sortie'&&r.stock<=r.seuil) sendAlertEmail(SPACES[s].name,r.desig+' ('+r.famille+')',r.stock,r.seuil,user);
   const action=modal.action; closeModal(); renderStock();
   showToast((action==='entree'?'▲ +':'▼ -')+qty+' — '+r.desig,action);
-  await saveSpace(s);
+  // Sauvegarder dans Supabase
+  setSyncStatus('syncing');
+  await saveStock(s, r.id, r.stock);
+  await saveHisto(s, entry);
+  setSyncStatus('ok');
 }
 
 // ════ HISTO ════
@@ -1198,7 +1282,7 @@ function renderHisto(){
     return `<div class="histo-item"><div class="histo-dot ${h.action}">${h.action==='entree'?'▲':'▼'}</div><div class="histo-body"><div class="histo-ref">${h.desig}${ub}</div><div class="histo-meta">${h.famille} · Avant:${h.avant} → Après:${h.apres}</div></div><div class="histo-qty ${h.action}">${h.action==='entree'?'+':'-'}${h.qty}</div><div class="histo-date">${ds}</div></div>`;
   }).join('');
 }
-async function clearHisto(){ if(!confirm('Vider tout historique ?'))return; histo[curSpace]=[]; await saveSpace(curSpace); renderHisto(); }
+async function clearHisto(){ if(!confirm('Vider tout historique ?'))return; await clearHistoInSupabase(curSpace); histo[curSpace]=[]; renderHisto(); }
 
 // ════ REFS ════
 function renderRefs(){
@@ -1210,8 +1294,8 @@ function renderRefs(){
   const hasExtraR = s===2||s===3;
   // Update refs table header
   document.querySelector('#page-refs .tbl-wrap thead tr').innerHTML = hasExtraR
-    ? '<th>Famille</th><th>Désignation</th><th>Vanne neuve</th><th>Vanne reco</th><th>Type gaz</th><th>Stock</th><th>Seuil</th><th>Actions</th>'
-    : '<th>Famille</th><th>Désignation</th><th>Stock</th><th>Seuil</th><th>Actions</th>';
+    ? '<th style="width:30px"></th><th>Famille</th><th>Désignation</th><th>Vanne neuve</th><th>Vanne reco</th><th>Type gaz</th><th>Stock</th><th>Seuil</th><th>Actions</th>'
+    : '<th style="width:30px"></th><th>Famille</th><th>Désignation</th><th>Stock</th><th>Seuil</th><th>Actions</th>';
 
   document.getElementById('tbody-refs').innerHTML=(refs[s]||[]).map((r,i)=>{
     const extraCols = hasExtraR ? `
@@ -1219,6 +1303,12 @@ function renderRefs(){
       <td><input type="text" value="${r.vanneReco||''}" style="width:80px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.82rem" onchange="updRef(${i},this.value,'vanneReco')" placeholder="—"></td>
       <td><input type="text" value="${r.typeGaz||''}" style="width:70px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.82rem" onchange="updRef(${i},this.value,'typeGaz')" placeholder="—"></td>` : '';
     return `<tr>
+      <td style="text-align:center;padding:2px">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <button class="btn btn-outline btn-sm" style="padding:1px 5px;font-size:0.7rem" onclick="moveRef(${i},-1)" ${i===0?'disabled':''}>↑</button>
+          <button class="btn btn-outline btn-sm" style="padding:1px 5px;font-size:0.7rem" onclick="moveRef(${i},1)" ${i===(refs[s].length-1)?'disabled':''}>↓</button>
+        </div>
+      </td>
       <td style="color:var(--text-muted);font-size:0.78rem">${r.famille}</td>
       <td style="font-weight:600">${r.desig}</td>
       ${extraCols}
@@ -1231,7 +1321,26 @@ function renderRefs(){
       </td></tr>`;
   }).join('');
 }
-async function updRef(i,val,field){ const s=curSpace; refs[s][i][field]=parseInt(val)||0; await saveSpace(s); }
+
+async function moveRef(i, dir){
+  const s=curSpace, j=i+dir;
+  if(j<0||j>=refs[s].length) return;
+  [refs[s][i],refs[s][j]]=[refs[s][j],refs[s][i]];
+  renderRefs();
+  setSyncStatus('syncing');
+  await saveRefOrder(s);
+  setSyncStatus('ok');
+  showToast('↕️ Ordre mis à jour','info');
+}
+async function updRef(i,val,field){
+  const s=curSpace;
+  const fieldMap = {vanneNeuve:'vanne_neuve',vanneReco:'vanne_reco',typeGaz:'type_gaz',stock:'stock',seuil:'seuil'};
+  const numFields = ['stock','seuil'];
+  const parsed = numFields.includes(field) ? (parseInt(val)||0) : val;
+  refs[s][i][field] = parsed;
+  const sbField = fieldMap[field]||field;
+  await saveRefField(s, refs[s][i].id, sbField, parsed);
+}
 async function addRef(){
   const s=curSpace, famille=document.getElementById('n-famille').value.trim(), desig=document.getElementById('n-desig').value.trim();
   const stock=parseInt(document.getElementById('n-stock').value)||0, seuil=parseInt(document.getElementById('n-seuil').value)||5;
@@ -1243,23 +1352,36 @@ async function addRef(){
   const id='REF'+Date.now();
   const newRef={id,famille,desig,stock,seuil};
   if(s===2||s===3){newRef.vanneNeuve=vanneNeuve;newRef.vanneReco=vanneReco;newRef.typeGaz=typeGaz;}
-  refs[s].push(newRef);
-  if(stock>0) histo[s].unshift({date:new Date().toISOString(),id,desig,famille,action:'entree',qty:stock,avant:0,apres:stock,user:localStorage.getItem('stock_session')||'Inconnu'});
-  await saveSpace(s);
-  ['n-famille','n-desig','n-vanne-neuve','n-vanne-reco','n-type-gaz'].forEach(x=>{const el=document.getElementById(x);if(el)el.value='';});
-  document.getElementById('n-stock').value=0; document.getElementById('n-seuil').value=5;
-  msg.innerHTML='<div class="alert alert-ok">✅ "'+desig+'" ajoutée.</div>'; msg.style.display='block';
-  setTimeout(()=>msg.style.display='none',3000); renderRefs();
+  try{
+    await addRefToSupabase(s, newRef);
+    refs[s].push(newRef);
+    if(stock>0){
+      const entry={date:new Date().toISOString(),id,desig,famille,action:'entree',qty:stock,avant:0,apres:stock,user:localStorage.getItem('stock_session')||'Inconnu'};
+      histo[s].unshift(entry);
+      await saveHisto(s, entry);
+    }
+    ['n-famille','n-desig','n-vanne-neuve','n-vanne-reco','n-type-gaz'].forEach(x=>{const el=document.getElementById(x);if(el)el.value='';});
+    document.getElementById('n-stock').value=0; document.getElementById('n-seuil').value=5;
+    msg.innerHTML='<div class="alert alert-ok">✅ "'+desig+'" ajoutée.</div>'; msg.style.display='block';
+    setTimeout(()=>msg.style.display='none',3000); renderRefs();
+  }catch(e){ msg.innerHTML='<div class="alert alert-err">Erreur: '+e.message+'</div>'; msg.style.display='block'; }
 }
 async function archiveRef(i){
   const s=curSpace, r=refs[s][i];
   if(!confirm('Archiver "'+r.desig+'" ?'))return;
-  archives[s].unshift({...r,dateArchivage:new Date().toISOString()}); refs[s].splice(i,1);
-  await saveSpace(s); renderRefs(); renderStock(); showToast('🗄️ Archivée','info');
+  try{
+    await archiveRefInSupabase(s, r);
+    archives[s].unshift({...r,dateArchivage:new Date().toISOString()});
+    refs[s].splice(i,1);
+    renderRefs(); renderStock(); showToast('🗄️ Archivée','info');
+  }catch(e){ showToast('Erreur archivage','error'); }
 }
 async function delRef(i){
   const s=curSpace; if(!confirm('Supprimer "'+refs[s][i].desig+'" ?'))return;
-  refs[s].splice(i,1); await saveSpace(s); renderRefs();
+  try{
+    await deleteRefFromSupabase(s, refs[s][i].id);
+    refs[s].splice(i,1); renderRefs();
+  }catch(e){ showToast('Erreur suppression','error'); }
 }
 
 // ════ ARCHIVES ════
@@ -1272,8 +1394,25 @@ function renderArchives(){
     return `<tr><td style="color:var(--text-muted);font-size:0.78rem">${a.famille}</td><td style="font-weight:600">${a.desig}</td><td style="text-align:center;font-weight:800;color:var(--purple)">${a.stock}</td><td style="font-size:0.78rem;color:var(--text-muted)">${ds}</td><td style="display:flex;gap:4px"><button class="btn btn-outline btn-sm" style="color:var(--green);border-color:var(--green)" onclick="restoreRef(${i})">♻️</button><button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="delArchive(${i})">🗑️</button></td></tr>`;
   }).join('');
 }
-async function restoreRef(i){ const s=curSpace,a=archives[s][i]; if(!confirm('Restaurer "'+a.desig+'" ?'))return; const{dateArchivage,...ref}=a; refs[s].push(ref); archives[s].splice(i,1); await saveSpace(s); renderArchives(); renderStock(); showToast('♻️ Restaurée','info'); }
-async function delArchive(i){ const s=curSpace; if(!confirm('Supprimer définitivement ?'))return; archives[s].splice(i,1); await saveSpace(s); renderArchives(); renderStock(); }
+async function restoreRef(i){
+  const s=curSpace, a=archives[s][i];
+  if(!confirm('Restaurer "'+a.desig+'" ?'))return;
+  try{
+    const archiveId = a.supabase_id; // stocké lors du chargement
+    const{dateArchivage,...ref}=a;
+    await restoreRefInSupabase(s, archiveId, ref);
+    refs[s].push(ref); archives[s].splice(i,1);
+    renderArchives(); renderStock(); showToast('♻️ Restaurée','info');
+  }catch(e){ showToast('Erreur restauration','error'); }
+}
+async function delArchive(i){
+  const s=curSpace; if(!confirm('Supprimer définitivement ?'))return;
+  try{
+    const archiveId = archives[s][i].supabase_id;
+    await deleteArchiveInSupabase(archiveId);
+    archives[s].splice(i,1); renderArchives(); renderStock();
+  }catch(e){ showToast('Erreur suppression','error'); }
+}
 
 // ════ EXPORT ════
 function exportCSV(){
@@ -1645,25 +1784,60 @@ async function sendDailySummaryEmail(){
 // ════ PERMISSIONS PAR UTILISATEUR ════
 const PAGES_LIST = ['histo','refs','archives','graphs'];
 const PAGES_LABELS = {histo:'Historique',refs:'Références',archives:'Archives',graphs:'Graphiques'};
-// Permissions par défaut (false = bloqué, true = libre)
 const DEFAULT_PERMS = {histo:false, refs:false, archives:false, graphs:true};
 const ADMIN_PERMS = {histo:true, refs:true, archives:true, graphs:true};
 const ADMIN_NAME = 'David';
 
-function getUserPerms(name){
-  if(name===ADMIN_NAME) return {...ADMIN_PERMS};
+// Cache des utilisateurs chargés depuis Supabase
+let sbUsers = [];
+
+async function loadUsers(){
   try{
-    const all = JSON.parse(localStorage.getItem('stock_user_perms')||'{}');
-    return all[name] || {...DEFAULT_PERMS};
-  }catch{ return {...DEFAULT_PERMS}; }
+    sbUsers = await sbFetch('/rest/v1/utilisateurs?order=id.asc');
+  }catch(e){
+    console.error('loadUsers error:', e);
+    sbUsers = [];
+  }
 }
 
-function saveUserPerms(name, perms){
+function getUsers(){
+  // Compatibilité avec l'ancien système
+  return sbUsers.map(u=>({name:u.nom, pin:u.pin}));
+}
+
+function saveUsers(list){ 
+  // Non utilisé avec Supabase - les users sont gérés via Supabase
+  console.log('saveUsers appelé - utilisez Supabase');
+}
+
+function getUserPerms(name){
+  if(name===ADMIN_NAME) return {...ADMIN_PERMS};
+  const u = sbUsers.find(x=>x.nom===name);
+  if(!u) return {...DEFAULT_PERMS};
+  return {
+    histo: u.perm_histo||false,
+    refs: u.perm_refs||false,
+    archives: u.perm_archives||false,
+    graphs: u.perm_graphs||true,
+  };
+}
+
+async function saveUserPerms(name, perms){
   try{
-    const all = JSON.parse(localStorage.getItem('stock_user_perms')||'{}');
-    all[name] = perms;
-    localStorage.setItem('stock_user_perms', JSON.stringify(all));
-  }catch{}
+    const u = sbUsers.find(x=>x.nom===name);
+    if(!u) return;
+    await sbFetch('/rest/v1/utilisateurs?id=eq.'+u.id, {
+      method:'PATCH',
+      body: JSON.stringify({
+        perm_histo: perms.histo,
+        perm_refs: perms.refs,
+        perm_archives: perms.archives,
+        perm_graphs: perms.graphs,
+      })
+    });
+    // Mettre à jour le cache local
+    u.perm_histo=perms.histo; u.perm_refs=perms.refs; u.perm_archives=perms.archives; u.perm_graphs=perms.graphs;
+  }catch(e){ console.error('saveUserPerms error:', e); }
 }
 
 function getLocks(){
@@ -2170,9 +2344,12 @@ async function sendAlertEmail(espace, ref, stock, seuil, user){
 
 // ════ INIT ════
 async function init(){
-  initLogin();
   setSyncStatus('syncing');
-  // Load all 3 spaces in parallel
+  // Charger les utilisateurs depuis Supabase d'abord
+  await loadUsers();
+  initLogin();
+  updateNavLockIcons();
+  // Charger les 3 espaces en parallèle
   await Promise.all([loadSpace(1),loadSpace(2),loadSpace(3)]);
   document.getElementById('loading').style.display='none';
   switchSpace(1);
@@ -2183,8 +2360,6 @@ async function init(){
 init();
 // Vérifier rappel export après chargement
 setTimeout(()=>checkExportReminder(), 3000);
-// Mettre à jour icônes verrous
-updateNavLockIcons();
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeModal(); document.querySelectorAll('.amodal.open').forEach(m=>m.classList.remove('open')); }});
 document.getElementById('m-qty').addEventListener('keydown',e=>{ if(e.key==='Enter')confirmMvt(); });
 document.getElementById('modal').addEventListener('click',e=>{ if(e.target===e.currentTarget)closeModal(); });
