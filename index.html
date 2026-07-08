@@ -757,7 +757,8 @@ let modal={}, pinBuf='', adminPinBuf='', cpOldBuf='', cpNewBuf='', cpConfBuf='';
 async function sbFetch(path, opts={}){
   const r = await fetch(SUPABASE_URL+path, {...opts, headers:{...SB_HEADERS,...(opts.headers||{})}});
   if(!r.ok){ const t=await r.text(); throw new Error(t); }
-  return r.json();
+  const text = await r.text();
+  return text ? JSON.parse(text) : null;
 }
 
 async function loadSpace(s){
@@ -858,9 +859,9 @@ async function saveRefOrder(s){
 async function addRefToSupabase(s, ref){
   try{
     const pos = (refs[s].length)+1;
-    await sbFetch('/rest/v1/refs', {
+    const r = await fetch(SUPABASE_URL+'/rest/v1/refs', {
       method:'POST',
-      headers:{'Prefer':'return=minimal'},
+      headers:{...SB_HEADERS,'Prefer':'return=minimal'},
       body: JSON.stringify({
         id: ref.id,
         espace_id: s,
@@ -874,6 +875,7 @@ async function addRefToSupabase(s, ref){
         position: pos,
       })
     });
+    if(!r.ok){ const t=await r.text(); throw new Error(t); }
   }catch(e){ console.error('addRef error:', e); throw e; }
 }
 
@@ -1303,10 +1305,10 @@ function renderRefs(){
       <td><input type="text" value="${r.vanneReco||''}" style="width:80px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.82rem" onchange="updRef(${i},this.value,'vanneReco')" placeholder="—"></td>
       <td><input type="text" value="${r.typeGaz||''}" style="width:70px;padding:4px 7px;border:1.5px solid var(--border);border-radius:5px;font-size:0.82rem" onchange="updRef(${i},this.value,'typeGaz')" placeholder="—"></td>` : '';
     return `<tr>
-      <td style="text-align:center;padding:2px">
+      <td style="text-align:center;padding:2px;min-width:35px">
         <div style="display:flex;flex-direction:column;gap:2px">
-          <button class="btn btn-outline btn-sm" style="padding:1px 5px;font-size:0.7rem" onclick="moveRef(${i},-1)" ${i===0?'disabled':''}>↑</button>
-          <button class="btn btn-outline btn-sm" style="padding:1px 5px;font-size:0.7rem" onclick="moveRef(${i},1)" ${i===(refs[s].length-1)?'disabled':''}>↓</button>
+          <button class="btn btn-outline btn-sm" style="padding:2px 7px;font-size:0.75rem;line-height:1" onclick="moveRef(${i},-1)" ${i===0?'disabled style="opacity:0.3"':''}>↑</button>
+          <button class="btn btn-outline btn-sm" style="padding:2px 7px;font-size:0.75rem;line-height:1" onclick="moveRef(${i},1)" ${i===(refs[s].length-1)?'disabled style="opacity:0.3"':''}>↓</button>
         </div>
       </td>
       <td style="color:var(--text-muted);font-size:0.78rem">${r.famille}</td>
